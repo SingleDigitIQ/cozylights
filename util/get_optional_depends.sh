@@ -7,8 +7,8 @@
 
 match="light_source"
 
-games_directory="../../games"
-mods_directory="../"
+games_directory="../../../games"
+mods_directory="../../"
 game_files=$(grep -l -R --include="*.lua" $match $games_directory)
 mod_files=$(grep -l -R --include="*.lua" $match $mods_directory)
 files=("${game_files[@]}""${mod_files[@]}")
