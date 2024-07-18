@@ -82,8 +82,6 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 
 *Plans for API: You will soon be able to completely override global step of cozylights(disable it and call it from your global step), and its items(for example balance them if you see gameplay value in this, change textures and what not), and override any defaults, and register specific settings for specific nodes*
 
-Would really appreciate if you won't forget to give credit.
-
 # todo
 
 - readd on_generated
@@ -152,3 +150,15 @@ completely ignore cozylights
 - after algos are perfected, add handle_async where it makes sense
 
 - add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
+
+LICENSE
+
+MIT for my code, will appreciate reasonable attribution
+
+And there are a couple of textures from MTG, which will be eventually replaced:
+
+default_torch_on_floor.png is by VanessaE (CC BY-SA 3.0)
+
+default_glass.png is by Krock (CC0 1.0)
+
+my textures are WTFPL if anything
