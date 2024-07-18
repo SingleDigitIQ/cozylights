@@ -82,6 +82,8 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 
 *Plans for API: You will soon be able to completely override global step of cozylights(disable it and call it from your global step), and its items(for example balance them if you see gameplay value in this, change textures and what not), and override any defaults, and register specific settings for specific nodes*
 
+Would really appreciate if you won't forget to give credit.
+
 # todo
 
 - readd on_generated
