@@ -136,7 +136,7 @@ local dirfloor = 0.5
 -- not to forget: what i mean by that is that + 0.5 in mf has to become a variable
 
 -- while we have the opportunity to cut the amount of same node reruns in this loop,
--- we avoid that because luajeet optimization breaks with one more hashtable look up
+-- we avoid that because luajit optimization breaks with one more hashtable look up
 -- and it becomes slower to run and at the same time grabs more memory
 -- todo: actually check for the forth time the above is real
 function cozylights:lightcast_no_fix_edges(pos, dir, radius,data,param2data,a,dim_levels)

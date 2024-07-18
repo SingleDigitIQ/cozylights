@@ -102,7 +102,7 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 
 - optimize light auto rebuild, resolve issue with proper area size so it does not overflow somehow
 
-- move to base "unsafe" methods for tables? seems like luajeet optimizes it all away and it's useless to bother?
+- move to base "unsafe" methods for tables? seems like luajit optimizes it all away and it's useless to bother?
 
 - try spread work over several loops and try vector.add
 
