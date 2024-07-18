@@ -17,7 +17,7 @@ end
 minetest.register_tool("cozylights:light_brush", {
 	description = "Light Brush",
 	inventory_image = "light_brush.png",
-	wield_image = "light_brush1.png^[transformR90",
+	wield_image = "light_brush.png^[transformR90",
 	tool_capabilities = {
 		full_punch_interval = 0.3,
 		max_drop_level = 1,
@@ -31,14 +31,10 @@ minetest.register_tool("cozylights:light_brush", {
 			local above = pointed_thing.above
 			if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 				above.y = above.y - 1
-				local above_hash = above.x + (above.y)*100 + above.z*10000
-				lb.pos_hash = above_hash
-				cozylights:draw_brush_light(pointed_thing.above, lb.brightness, lb.radius, lb.strength)
-			else
-				local above_hash = above.x + (above.y)*100 + above.z*10000
-				lb.pos_hash = above_hash
-				cozylights:draw_brush_light(pointed_thing.above, lb.brightness, lb.radius, lb.strength)
 			end
+			local above_hash = above.x + (above.y)*100 + above.z*10000
+			lb.pos_hash = above_hash
+			cozylights:draw_brush_light(pointed_thing.above, lb.brightness, lb.radius, lb.strength)
 		end
 	end,
 	on_place = function(_, placer)
@@ -67,7 +63,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 
 	if fields.radius then
 		local radius = tonumber(fields.radius) > 200 and 200 or tonumber(fields.radius)
-		lbrush.radius = radius < 1 and 1 or radius
+		lbrush.radius = radius < 0 and 0 or radius
 	end
 	if fields.strength then
 		local strength = tonumber(fields.strength) > 1 and 1 or tonumber(fields.strength)
@@ -112,17 +108,35 @@ local function calc_dims_for_brush(brightness, radius, strength)
 	return dim_levels
 end
 
-local c_air = 126
+local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
 	c_light1 + 7, c_light1 + 8, c_light1 + 9, c_light1 + 10, c_light1 + 11, c_light1 + 12, c_light1 + 13 }
 local gent_total = 0
 local gent_count = 0
 
+local function draw_one_node(pos,brightness)
+	local node = minetest.get_node(pos)
+	if (string.find(node.name,"cozylights:") and brightness > node.param2) or node.name == "air" then
+		minetest.set_node(
+			pos,
+			{
+				name="cozylights:light"..brightness,
+				param2=brightness
+			}
+		)
+	end
+end
+
+
 --this function pulls numbers out of its ass instead of seriously computing everything, so its faster
 --some nodes are being missed for big spheres
 function cozylights:draw_brush_light(pos, brightness, radius, strength)
 	local t = os.clock()
+	if radius == 0 then
+		draw_one_node(pos,brightness)
+		return
+	end
 	local dim_levels = calc_dims_for_brush(brightness, radius, strength)
 	--minetest.chat_send_all("dim_levels:"..dump(dim_levels))
 	local vm  = minetest.get_voxel_manip()
@@ -138,8 +152,8 @@ function cozylights:draw_brush_light(pos, brightness, radius, strength)
 	local cid = data[a:index(pos.x,pos.y-1,pos.z)]
 	local cida = data[a:index(pos.x,pos.y+1,pos.z)]
 	if cid and cida then
-		if (cid == 126 or (cid >= c_lights[1] and cid <= c_lights[14]))
-			and cida ~= 126 and (cida < c_lights[1] or cida > c_lights[14])
+		if (cid == c_air or (cid >= c_lights[1] and cid <= c_lights[14]))
+			and cida ~= c_air and (cida < c_lights[1] or cida > c_lights[14])
 		then
 			ylvl = -1
 		end
@@ -147,7 +161,7 @@ function cozylights:draw_brush_light(pos, brightness, radius, strength)
 		return
 	end
 	pos.y = pos.y + ylvl
-	--data[a:indexp(pos)] = c_lights[brightness]
+	data[a:indexp(pos)] = c_lights[brightness]
 	if cozylights.always_fix_edges == true then
 		minetest.chat_send_all("running with fix edges enabled")
 		local visited_pos = {}

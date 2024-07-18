@@ -6,8 +6,6 @@ Early alpha and wasn't supposed to be released in this state, but at least NotSo
 
 Oh yeah, things to know about current alpha state:
 
-- Light Brush on mouse hold is now disabled, only clicking works, because I reworked an algo somehow related to it.
-
 - on_generated callback is disabled, so if you want a scene with cozy lights in caverealms or everness, you will have to run ```/rebuildlights``` in an area
 
 - other wielded light mods might cause issues easily, I will fix it
@@ -26,8 +24,6 @@ If a mod or a game you like is not supported or there are some problems, tell me
 
 **3. if a light source in a game/mod is not static, sometimes disappears or changes the brightness according to whatever, cozy lights won't behave as intended.**
 
-**4. Alpha version means that it probably does not behave as intended in general.**
-
 Voxel light maps are a complete game changer - if you are an artist or a builder you will notice that it is almost like going from 2d to 3d in terms of depth. You now have 14 shades for every building block, and it does not have to register 14 versions of every building block. Cobble only challenge has got a whole lot easier, something fun to look at with the least fun texture is possible now with just this mod :>
 
 You can also build these lights just like you do with any structures, in other words, place invisible blocks of light of all possible engine light levels block-by-block. Tools are coming soon to make this process more user-friendly, right now you will need to make them visible and interactable in debug mode.
@@ -36,11 +32,15 @@ Wielded cozy light behaves exactly as you would expect, just brighter far reachi
 
 Typical node light sources like torches and mese lamps behave almost as you would expect, you place them - they emit light, just brighter and far more reaching. However, I have auto rebuild lights disabled, so at this stage you will have to run ```/rebuildlights``` command if you have more than one light sources close to each other and you removed one of them. I just need to figure out fast enough algo, so running commands after such a trivial action won't be needed soon.
 
-## light brush
+## Light Brush
 
-Light brush however is a bit different as of now, you cant just remove it entirely yet by destroying a light source block, you will have to remove it by using chat command/commands.
+Light Brush however is a bit different as of now, you cant just remove it entirely yet by destroying a light source block, you will have to remove it by using chat command/commands.
 
-If you want a custom cozy light it's best to use light brush with user-friendly settings. I would rather not recommend playing with global light source settings, unless you really feel committed to the idea of voxel based light maps and are ready to spend lots of time on handling edge cases(when some dim lights stop emitting any lights at all and some bright lights become ridiculously bright) and tuning performance(if you have a ton of lights in the area and you are on mobile - RIP, compile more RAM). Settings like low, mid, high are coming though.
+If you want a custom cozy light it's best to use Light Brush. I would rather not recommend playing with global light source settings, unless you really feel committed to the idea of voxel based light maps and are ready to spend lots of time on handling edge cases(when some dim lights stop emitting any lights at all and some bright lights become ridiculously bright) and tuning performance(if you have a ton of lights in the area and you are on mobile - RIP, compile more RAM). Settings like low, mid, high are coming though.
+
+Light Brush' reach is 40 nodes, so you can have perspective. *Clicking or holding left mouse button* draws light with given settings
+
+*On right click* settings menu opens up which is for now very basic, allows to choose brightness, radius and strength. Brightness is from 1 to 14, just like engine lights. Radius of 0 does not make a sphere and draws only 1 node, just like placing a node, the only difference is that you have reach of 40 nodes. Max radius is 120. Strength is from 0 to 1, the higher the value, the less lights will drop brightness farther from epicenter
 
 ## Chat Commands
 
@@ -84,9 +84,9 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 
 # todo
 
-- readd on_generated
+- add override/blend/default modes for light brush
 
-- readd mouse hold for light brush
+- readd on_generated
 
 - raytracing
 
@@ -107,8 +107,6 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 - try spread work over several loops and try vector.add
 
 - add priveleges so schematics can be used on multiplayer server
-
-- add override/blend/default modes for light brush
 
 - make darkness nodes, wielded darkness, Darkness Brush
 

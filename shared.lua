@@ -3,7 +3,7 @@ local c_light1 = minetest.get_content_id("cozylights:light1")
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
 c_light1 + 7, c_light1 + 8, c_light1 + 9, c_light1 + 10, c_light1 + 11, c_light1 + 12, c_light1 + 13 }
 local c_light14 = c_lights[14]
-
+local c_air = minetest.get_content_id("air")
 local mf = math.floor
 
 function cozylights:getVoxelManipData(pos, size)
@@ -151,7 +151,7 @@ function cozylights:lightcast_no_fix_edges(pos, dir, radius,data,param2data,a,di
 		local idx = a:index(x,y,z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == 126 or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				local light = c_lights[dim]
 				if light > cid then
@@ -197,7 +197,7 @@ function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels,visi
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid == 126 or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true

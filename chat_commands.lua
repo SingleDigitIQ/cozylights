@@ -1,4 +1,4 @@
-local c_air = 126
+local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
 
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
