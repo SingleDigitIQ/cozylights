@@ -5,7 +5,7 @@ cozylights = {
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
 	cozy_wielded_light = minetest.settings:get_bool("cozylights_wielded_light", false),
-	override_engine_light_sources = minetest.settings:get_bool("cozylights_override_engine_light_sources", true),
+	override_engine_light_sources = minetest.settings:get_bool("cozylights_override_engine_light_sources", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
 
 	-- this is a table of modifiers for global light source settings.

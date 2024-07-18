@@ -2,7 +2,7 @@
 
 Lights which make everything cozy =^__^=
 
-Early alpha and wasn't supposed to be released in this state, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us. Feedback, suggestions, bug reports are very welcome. **At this dev stage Cozy Lights can be good for builders in creative mode**, survival is somewhat okayish. Also schematics with cozy lights can be used on a multiplayer server just fine. But using cozy lights functionality on a multiplayer server other than prebuilt schematics is not currently recommended, I am working on it. 
+Early alpha and wasn't supposed to be released in this state, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us. Feedback, suggestions, bug reports are very welcome. **At this dev stage Cozy Lights can be good for builders in creative mode**, survival is somewhat maybiyish okayish. Also schematics with cozy lights can be used on a multiplayer server just fine. But using cozy lights functionality on a multiplayer server other than prebuilt schematics is not currently recommended, I am working on it. 
 
 Oh yeah, things to know about current alpha state:
 
@@ -32,7 +32,7 @@ Voxel light maps are a complete game changer - if you are an artist or a builder
 
 You can also build these lights just like you do with any structures, in other words, place invisible blocks of light of all possible engine light levels block-by-block. Tools are coming soon to make this process more user-friendly, right now you will need to make them visible and interactable in debug mode.
 
-Wielded cozy light behaves exactly as you would expect, just brighter far reaching light source, more cpu work.
+Wielded cozy light behaves exactly as you would expect, just brighter far reaching light source, more cpu work. It is disabled by default
 
 Typical node light sources like torches and mese lamps behave almost as you would expect, you place them - they emit light, just brighter and far more reaching. However, I have auto rebuild lights disabled, so at this stage you will have to run ```/rebuildlights``` command if you have more than one light sources close to each other and you removed one of them. I just need to figure out fast enough algo, so running commands after such a trivial action won't be needed soon.
 
