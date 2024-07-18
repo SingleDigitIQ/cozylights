@@ -1,0 +1,246 @@
+local sphere_surfaces = {[19]=nil}
+local c_light1 = minetest.get_content_id("cozylights:light1")
+local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
+c_light1 + 7, c_light1 + 8, c_light1 + 9, c_light1 + 10, c_light1 + 11, c_light1 + 12, c_light1 + 13 }
+local c_light14 = c_lights[14]
+
+local mf = math.floor
+
+function cozylights:getVoxelManipData(pos, size)
+	local minp = vector.subtract(pos, size)
+	local maxp = vector.add(pos, size)
+	local vm  = minetest.get_voxel_manip()
+	local emin, emax = vm:read_from_map(vector.subtract(minp, 1), vector.add(maxp, 1))
+	local data = vm:get_data()
+	local param2data = vm:get_param2_data()
+	local a = VoxelArea:new{
+		MinEdge = emin,
+		MaxEdge = emax
+	}
+	return minp,maxp,vm,data,param2data,a
+end
+
+function cozylights:setVoxelManipData(vm,data,param2data, update_liquids)
+	vm:set_data(data)
+	if param2data ~= nil then
+		vm:set_param2_data(param2data)
+	end
+	if update_liquids == true then
+		vm:update_liquids()
+	end
+	vm:write_to_map()
+end
+
+--todo: 6 directions of static slices or dynamic slices if its faster somehow(it wasnt so far)
+function cozylights:slice_cake(surface,radius)
+	local sliced = {}
+	for k,v in pairs(surface) do
+		-- full sphere except for a cone from center to max -y of 45 degrees or like pi/2 radians or something
+		if v.y > -radius*0.7071 then
+			table.insert(sliced,v)
+		end
+	end
+	return sliced
+end
+
+--somewhat adapted from worldedit code
+function cozylights:get_sphere_surface(radius,sliced)
+	if sphere_surfaces[radius] == nil then
+		local sphere_surface = {}
+		local min_radius, max_radius = radius * (radius - 1), radius * (radius + 1)
+		for z = -radius, radius do
+			for y = -radius, radius do
+				for x = -radius, radius do
+					local squared = x * x + y * y + z * z
+					if squared >= min_radius and squared <= max_radius then
+						-- todo: could arrange these in a more preferable for optimization order
+						sphere_surface[#sphere_surface+1] = {x=x,y=y,z=z}
+					end
+				end
+			end
+		end
+		local t = {
+			full = sphere_surface
+		}
+		if radius < 30 then
+			t.minusyslice = cozylights:slice_cake(sphere_surface,radius) --typical wielded light
+			sphere_surfaces[radius] = t
+			if sliced == true then
+				return t.minusyslice
+			end
+		end
+		return sphere_surface
+	else
+		if sliced == true and sphere_surfaces[radius].minusyslice ~= nil then
+			return sphere_surfaces[radius].minusyslice
+		end
+		return sphere_surfaces[radius].full
+	end
+end
+
+function cozylights:calc_dims(cozy_item)
+
+	local brightness_mod = 0
+	local reach_mod = 0
+	local dim_mod = 0
+	if cozy_item.modifiers ~= nil then
+		brightness_mod = cozylights.coziest_table[cozy_item.modifiers].brightness
+		reach_mod = cozylights.coziest_table[cozy_item.modifiers].reach_factor
+		dim_mod = cozylights.coziest_table[cozy_item.modifiers].dim_factor
+	end
+	local max_light = mf(cozy_item.light_source + cozylights.brightness + brightness_mod)
+	local r = mf(max_light*max_light/10*(cozylights.reach_factor+reach_mod))
+	minetest.chat_send_all("initial r: "..r)
+	local r_max = 0
+	local dim_levels = {}
+	local dim_factor = cozylights.dim_factor + dim_mod
+	for i = r , 1, -1 do
+		local dim = math.sqrt(math.sqrt(i)) * dim_factor
+		local light_i = max_light + 1 - mf(dim)
+		if light_i < 1 then
+			--light_i = 1
+			r_max = i
+		else
+			if light_i > 14 then
+				light_i = 14
+			end
+			dim_levels[i] = light_i
+		end
+
+	end
+	-- we cut the r only if max_r found is lower than r, so that we keep the ability to have huge radiuses
+	if r_max < r then
+		return r_max-1,dim_levels
+	end
+	return r,dim_levels
+end
+
+local cozycids_sunlight_propagates = {}
+-- ensure cozy position in memory
+-- default amount of lights sources: 194
+-- in default game with moreblocks mod: 5134
+--prealloc(cozycids_sunlight_propagates, 194, true)
+--cozycids_sunlight_propagates = {}
+minetest.after(1, function()
+	cozycids_sunlight_propagates = cozylights.cozycids_sunlight_propagates
+	finalize(cozycids_sunlight_propagates)
+	minetest.chat_send_all(#cozycids_sunlight_propagates)
+end)
+
+-- adjusting dirfloor might help with some nodes missing. probably the only acceptable way to to eliminate node
+-- misses and not sacrifice performance too much or at all
+local dirfloor = 0.5
+-- raycast but normal
+-- todo: if radius higher than i think 15, we need to somehow grab more nodes, without it it's not entirely accurate
+-- i hope a cheaply computed offset based on dir will do
+-- not to forget: what i mean by that is that + 0.5 in mf has to become a variable
+
+-- while we have the opportunity to cut the amount of same node reruns in this loop,
+-- we avoid that because luajeet optimization breaks with one more hashtable look up
+-- and it becomes slower to run and at the same time grabs more memory
+-- todo: actually check for the forth time the above is real
+function cozylights:lightcast_no_fix_edges(pos, dir, radius,data,param2data,a,dim_levels)
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	--local mex, mey, mez = MinEdge.x,MinEdge.y,MinEdge.z
+	local light_nerf = 0
+	for i = 1, radius do
+		local x = mf(dx*i+dirfloor) + px
+		local y = mf(dy*i+dirfloor) + py
+		local z = mf(dz*i+dirfloor) + pz
+		--local idx = aindex(x,y,z,ystride, zstride, MinEdge)
+		local idx = a:index(x,y,z)
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			if cid == 126 or (cid >= c_light1 and cid <= c_light14) then
+				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+				local light = c_lights[dim]
+				if light > cid then
+					data[idx] = light
+					param2data[idx] = dim
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+	end
+end
+
+-- removes some lights that light up the opposite side of an obstacle
+-- it is weird and inaccurate as of now, i can make it accurate the expensive way,
+-- still looking for a cheap way
+function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	local halfrad = radius/2
+	local braking_brak = false
+	local next_x = mf(dx+dirfloor) + px
+	local next_y = mf(dy+dirfloor) + py
+	local next_z = mf(dz+dirfloor) + pz
+	for i = 1, radius do
+		local x = next_x
+		local y = next_y
+		local z = next_z
+		local idx = a:index(x,y,z)
+		for n = 1, 6 do
+			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
+				braking_brak = true
+				break
+			end
+		end
+		if braking_brak == true then
+			break
+		end
+		x,y,z = nil,nil,nil
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			-- appears that hash lookup in a loop is as bad as math
+			if cid == 126 or (cid >= c_light1 and cid <= c_light14) then
+				if i < halfrad then
+					if not visited_pos[idx] then
+						visited_pos[idx] = true
+						local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+						local light = c_lights[dim]
+						if light > cid then
+							data[idx] = light
+							param2data[idx] = dim
+						end
+					end
+				else
+					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+					local light = c_lights[dim]
+					if light > cid then
+						data[idx] = light
+						param2data[idx] = dim
+					end
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+
+		next_x = mf(dx*(i+1)+dirfloor) + px
+		next_y = mf(dy*(i+1)+dirfloor) + py
+		next_z = mf(dz*(i+1)+dirfloor) + pz
+
+		--local next_adj_indxs = {
+		--	a:index(next_x,y,z),
+		--	a:index(x,y,next_z),
+		--	a:index(x,next_y,z),
+		--	a:index(next_x,next_y,z),
+		--	a:index(x,next_y,next_z),
+		--}
+
+		--for _, j in pairs(next_adj_indxs) do
+		--	if cozycids_sunlight_propagates[data[j]] ~= true then
+		--		braking_brak = true
+		--		break
+		--	end
+		--end
+
+	end
+end

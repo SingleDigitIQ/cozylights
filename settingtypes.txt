@@ -1,0 +1,26 @@
+[**Global Node Sources]
+
+#	if none given, this default value will be used
+cozylights_default_size (Default chat command radius) int 40 5 120
+
+#	max brightness of surrounding light. does not affect a light_source node base value. attention: if light is too bright, the scene can lose nuance
+cozylights_brightness (Global ambient light source brightness modifier) float 3.0 -10.0 10.0
+
+#	affects max radius of the light but only when its bright enough, if its very dim the setting will do nothing
+cozylights_reach_factor (Global ambient light source reach factor) float 4.0 0.0 10.0
+
+#	how fast light dims further away from the source, higher means farther dim lights will persist for longer
+cozylights_dim_factor (Global ambient light source dim factor) float 9.0 0.0 10.0
+
+#	whether cozy wielded light is enabled, can be too expensive for mobiles and potatos, especially in heavily modded worlds
+cozylights_wielded_light (Enable cozy wielded light) bool true
+
+#	sets all light sources to 1 so that the engine will not render anticlimactic squares for torches
+#	and such. if a player removes cozylights from a world while this is set to true, fixmap mod for existing lights will be required, therefore default is set
+#	to false, so you will need to enable it yourself after you decide that you like cozylights more. 
+cozylights_override_engine_light_sources (Override engine light sources) bool false
+
+#	makes all edges stop lights properly, this setting exists because without this cozylights algo is much faster, so if for example
+#   you need to first place a lot of lights all over the place, it would be easier to first place those lights and then run 
+#   /fixedges manually
+cozylights_always_fix_edges (Override engine light sources) bool false
