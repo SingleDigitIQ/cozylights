@@ -167,13 +167,14 @@ minetest.register_chatcommand("spawnlight", {
 		local brightness, radius, strength = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		minetest.log("action", name .. " uses /optimizeformobile "..brightness.." "..radius.." "..strength.." at position: "..dump(pos))
-		if brightness < 0 then brightness = 1 end
+		if brightness < 0 then brightness = 0 end
 		if brightness > 14 then brightness = 14 end
-		if radius < 0 then radius = 1 end
+		if radius < 0 then radius = 0 end
 		if radius > 120 then radius = 120 end
 		if strength < 0 then strength = 0 end
 		if strength > 1 then strength = 1 end
-		cozylights:draw_brush_light(pos, brightness, radius, strength)
+		local lb = {brightness=brightness,radius=radius,strength=strength,mode=0,cover_only_surfaces=0}
+		cozylights:draw_brush_light(pos, lb)
 		return true, "Done."
 	end,
 })

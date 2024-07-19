@@ -234,13 +234,12 @@ minetest.register_on_joinplayer(function(player)
 		last_wield="",
 		prev_wielded_lights={},
 		lbrush={
-			pos_hash=0,
-			brightness=4,
-			reach_factor=4,
-			dim_factor=9,
-			cover_only_surfaces=0,
+			brightness=14,
 			radius=0,
-			strength=0.5
+			strength=0.5,
+			mode=1,
+			cover_only_surfaces=0,
+			pos_hash=0,
 		}
 	}
 end)
@@ -283,7 +282,7 @@ minetest.register_globalstep(function(dtime)
 				local control_bits = player:get_player_control_bits()
 				if control_bits >= 128 and control_bits < 256 then
 					local look_dir = player:get_look_dir()
-					local endpos = vector.add(pos, vector.multiply(look_dir, 40))
+					local endpos = vector.add(pos, vector.multiply(look_dir, 100))
 					local hit = minetest.raycast(pos, endpos, false, false):next()
 					if hit then
 						local nodenameunder = minetest.get_node(hit.under).name
@@ -294,9 +293,9 @@ minetest.register_globalstep(function(dtime)
 							above.y = above.y - 1
 						end
 						local above_hash = above.x + (above.y)*100 + above.z*10000
-						if above_hash ~= lb.pos_hash then
+						if lb.mode == 2 or lb.mode == 4 or lb.mode == 5 or above_hash ~= lb.pos_hash then
 							lb.pos_hash = above_hash
-							cozylights:draw_brush_light(above, lb.brightness, lb.radius, lb.strength)
+							cozylights:draw_brush_light(above, lb)
 						end
 					end
 				end

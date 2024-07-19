@@ -84,9 +84,21 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 
 # todo
 
-- add override/blend/default modes for light brush
+- add inventory images for lights and debug lights, make them only available in creative
+
+- make floodable light sources not work in water just like in original wielded light
+
+- add command to increase/decrease brightness of every light node in an area, at least if limited for now
 
 - readd on_generated
+
+- readd light auto rebuild on light source destroy
+
+- see what can be done about dynamic light sources if it will be needed at all after light auto rebuild. dynamic means their brightness is not constant or maybe they disappear/reappear
+
+- make darkness nodes, wielded darkness, Darkness Brush
+
+- add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
 
 - raytracing
 
@@ -96,58 +108,40 @@ the expensive one is supposed to fix some voxel resolution artifacts of the ligh
 
 - add optional sky textures
 
-- add auto light rebuild on light source destroy
+- add priveleges so schematics can be used on multiplayer server
 
 - add multiplayer/mobile settings(very little light nodes, very simple light map), and mid settings(more or less okayish), max is default
-
-- optimize light auto rebuild, resolve issue with proper area size so it does not overflow somehow
 
 - move to base "unsafe" methods for tables? seems like luajit optimizes it all away and it's useless to bother?
 
 - try spread work over several loops and try vector.add
 
-- add priveleges so schematics can be used on multiplayer server
-
-- make darkness nodes, wielded darkness, Darkness Brush
-
 - figure out what to do about lights going through diagonal, one node thick walls. also still somehow manage to keep algo cheap
 
-- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable
+- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
 
-- maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that
-completely ignore cozylights
+- maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
 
-- make automatic light propagation for any decoration light sources on generation and on first load
+- lights auto rebuild on first load after settings change?
 
 - make a table for existing decoration nodes
 
-- make floodable light sources not work in water just like in original wielded light
-
 - make sure spheres of big sizes dont miss too many blocks
 
-- optimization skips for big lights
-
-- give light sources metadata, so when they are destroyed you can rebuild easily, except maybe give it to big lights
+- give light sources metadata, so when nearby light sources are destroyed you can find and rebuild easily, also give metadata to light brush epicenter for the same reason
 
 - maintain files in which you record light source positions, which can be quickly grabbed to rebuild lights if there is a removal
 
 - add cone light blocks, so those lights can be built on top of each other to make static lights from old games
 
-- add light grabber tool, so that the light wont be selectable without it
+- add light grabber tool, Light Excavation Tool 9000 TURBO V3, so that the light wont be selectable without it
 
-- then add light controller which will adjust light nodes accordingly and set node_metadata for it, so that if the source is removed everything else also goes dark
-
-- allow Consumer Grade Reality Bending Device to create preset nodes with chosen qualities
-
-- Light Excavation Tool 9000 TURBO V3
-
-- refrain from frying multiplayer servers
+- add Consumer Grade Reality Bending Device to create preset nodes with chosen qualities
 
 - add global step override api, ability to implement cozylights global step into a game/other mod global step more efficiently, maybe add generic global step call like mainloop or mainstep, see what other games do with it, choose or create convention for this i guess
 
-- after algos are perfected, add handle_async where it makes sense
+- add handle_async where it makes sense
 
-- add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
 
 LICENSE
 

@@ -61,13 +61,13 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 		local visited_pos = {}
 		for i,pos2 in ipairs(sphere_surface) do
 			local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
-			cozylights:lightcast(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels,visited_pos)
+			cozylights:lightcast_fix_edges(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels,visited_pos)
 		end
 	else
 		for i,pos2 in ipairs(sphere_surface) do
 			local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
 			cozylights.dir = vector.direction(pos, end_pos)
-			cozylights:lightcast_no_fix_edges(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
+			cozylights:lightcast(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 		end
 	end
 	if update_needed == 1 then
@@ -143,7 +143,7 @@ function cozylights:rebuild_light(pos, cozy_item,vm,a,data,param2data)
 	for _,pos2 in ipairs(sphere_surface) do
 		local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
 		if a:containsp(end_pos) then
-			cozylights:lightcast_no_fix_edges(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
+			cozylights:lightcast(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 		end
 	end
 end
