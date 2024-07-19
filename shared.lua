@@ -3,7 +3,7 @@ local c_light1 = minetest.get_content_id("cozylights:light1")
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
 c_light1 + 7, c_light1 + 8, c_light1 + 9, c_light1 + 10, c_light1 + 11, c_light1 + 12, c_light1 + 13 }
 local c_light14 = c_lights[14]
-
+local c_air = minetest.get_content_id("air")
 local mf = math.floor
 
 function cozylights:getVoxelManipData(pos, size)
@@ -139,19 +139,17 @@ local dirfloor = 0.5
 -- we avoid that because luajit optimization breaks with one more hashtable look up
 -- and it becomes slower to run and at the same time grabs more memory
 -- todo: actually check for the forth time the above is real
-function cozylights:lightcast_no_fix_edges(pos, dir, radius,data,param2data,a,dim_levels)
+function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels)
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
-	--local mex, mey, mez = MinEdge.x,MinEdge.y,MinEdge.z
 	local light_nerf = 0
 	for i = 1, radius do
 		local x = mf(dx*i+dirfloor) + px
 		local y = mf(dy*i+dirfloor) + py
 		local z = mf(dz*i+dirfloor) + pz
-		--local idx = aindex(x,y,z,ystride, zstride, MinEdge)
 		local idx = a:index(x,y,z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == 126 or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				local light = c_lights[dim]
 				if light > cid then
@@ -167,10 +165,113 @@ function cozylights:lightcast_no_fix_edges(pos, dir, radius,data,param2data,a,di
 	end
 end
 
+function cozylights:lightcast_blend(pos, dir, radius,data,param2data,a,dim_levels)
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	for i = 1, radius do
+		local x = mf(dx*i+dirfloor) + px
+		local y = mf(dy*i+dirfloor) + py
+		local z = mf(dz*i+dirfloor) + pz
+		local idx = a:index(x,y,z)
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+				local original_light = cid - c_light1 --param2data[idx]
+				dim = mf((dim + original_light)/2+0.5)
+				if dim < 1 then break end
+				data[idx] = c_lights[dim]
+				param2data[idx] = dim
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+	end
+end
+
+function cozylights:lightcast_override(pos, dir, radius,data,param2data,a,dim_levels)
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	for i = 1, radius do
+		local x = mf(dx*i+dirfloor) + px
+		local y = mf(dy*i+dirfloor) + py
+		local z = mf(dz*i+dirfloor) + pz
+		local idx = a:index(x,y,z)
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+				data[idx] = c_lights[dim]
+				param2data[idx] = dim
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+	end
+end
+
+function cozylights:lightcast_lighten(pos, dir, radius,data,param2data,a,dim_levels)
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	for i = 1, radius do
+		local x = mf(dx*i+dirfloor) + px
+		local y = mf(dy*i+dirfloor) + py
+		local z = mf(dz*i+dirfloor) + pz
+		local idx = a:index(x,y,z)
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+				if c_lights[dim] > cid then
+					local original_light = cid - c_light1
+					dim = mf((dim + original_light)/2+0.5)
+					data[idx] = c_lights[dim]
+					param2data[idx] = dim
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+	end
+end
+
+function cozylights:lightcast_darken(pos, dir, radius,data,param2data,a,dim_levels)
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	for i = 1, radius do
+		local x = mf(dx*i+dirfloor) + px
+		local y = mf(dy*i+dirfloor) + py
+		local z = mf(dz*i+dirfloor) + pz
+		local idx = a:index(x,y,z)
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+				if c_lights[dim] < cid then
+					local original_light = cid - c_light1
+					dim = mf((dim + original_light)/2)
+					data[idx] = c_lights[dim]
+					param2data[idx] = dim
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+	end
+end
+
 -- removes some lights that light up the opposite side of an obstacle
 -- it is weird and inaccurate as of now, i can make it accurate the expensive way,
 -- still looking for a cheap way
-function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
 	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
 	local light_nerf = 0
@@ -197,7 +298,7 @@ function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels,visi
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid == 126 or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true
@@ -241,6 +342,247 @@ function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels,visi
 		--		break
 		--	end
 		--end
+
+	end
+end
+
+
+function cozylights:lightcast_blend_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	local halfrad = radius/2
+	local braking_brak = false
+	local next_x = mf(dx+dirfloor) + px
+	local next_y = mf(dy+dirfloor) + py
+	local next_z = mf(dz+dirfloor) + pz
+	for i = 1, radius do
+		local x = next_x
+		local y = next_y
+		local z = next_z
+		local idx = a:index(x,y,z)
+		for n = 1, 6 do
+			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
+				braking_brak = true
+				break
+			end
+		end
+		if braking_brak == true then
+			break
+		end
+		x,y,z = nil,nil,nil -- they are probably still allocated though
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			-- appears that hash lookup in a loop is as bad as math
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				if i < halfrad then
+					if not visited_pos[idx] then
+						visited_pos[idx] = true
+						local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+						local original_light = cid - c_light1
+						dim = mf((dim + original_light)/2+0.5)
+						if dim < 1 then break end
+						data[idx] = c_lights[dim]
+						param2data[idx] = dim
+					end
+				else
+					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+					local original_light = cid - c_light1
+					dim = mf((dim + original_light)/2+0.5)
+					if dim < 1 then break end
+					data[idx] = c_lights[dim]
+					param2data[idx] = dim
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+
+		next_x = mf(dx*(i+1)+dirfloor) + px
+		next_y = mf(dy*(i+1)+dirfloor) + py
+		next_z = mf(dz*(i+1)+dirfloor) + pz
+
+	end
+end
+
+function cozylights:lightcast_override_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	local halfrad = radius/2
+	local braking_brak = false
+	local next_x = mf(dx+dirfloor) + px
+	local next_y = mf(dy+dirfloor) + py
+	local next_z = mf(dz+dirfloor) + pz
+	for i = 1, radius do
+		local x = next_x
+		local y = next_y
+		local z = next_z
+		local idx = a:index(x,y,z)
+		for n = 1, 6 do
+			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
+				braking_brak = true
+				break
+			end
+		end
+		if braking_brak == true then
+			break
+		end
+		x,y,z = nil,nil,nil -- they are probably still allocated though
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			-- appears that hash lookup in a loop is as bad as math
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				if i < halfrad then
+					if not visited_pos[idx] then
+						visited_pos[idx] = true
+						local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+						data[idx] = c_lights[dim]
+						param2data[idx] = dim
+					end
+				else
+					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+					data[idx] = c_lights[dim]
+					param2data[idx] = dim
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+
+		next_x = mf(dx*(i+1)+dirfloor) + px
+		next_y = mf(dy*(i+1)+dirfloor) + py
+		next_z = mf(dz*(i+1)+dirfloor) + pz
+
+	end
+end
+
+
+function cozylights:lightcast_lighten_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	local halfrad = radius/2
+	local braking_brak = false
+	local next_x = mf(dx+dirfloor) + px
+	local next_y = mf(dy+dirfloor) + py
+	local next_z = mf(dz+dirfloor) + pz
+	for i = 1, radius do
+		local x = next_x
+		local y = next_y
+		local z = next_z
+		local idx = a:index(x,y,z)
+		for n = 1, 6 do
+			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
+				braking_brak = true
+				break
+			end
+		end
+		if braking_brak == true then
+			break
+		end
+		x,y,z = nil,nil,nil -- they are probably still allocated though
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			-- appears that hash lookup in a loop is as bad as math
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				if i < halfrad then
+					if not visited_pos[idx] then
+						visited_pos[idx] = true
+						local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+						if c_lights[dim] > cid then
+							local original_light = cid - c_light1
+							dim = mf((dim + original_light)/2+0.5)
+							data[idx] = c_lights[dim]
+							param2data[idx] = dim
+						end
+					end
+				else
+					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+					if c_lights[dim] > cid then
+						local original_light = cid - c_light1
+						dim = mf((dim + original_light)/2+0.5)
+						data[idx] = c_lights[dim]
+						param2data[idx] = dim
+					end
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+
+		next_x = mf(dx*(i+1)+dirfloor) + px
+		next_y = mf(dy*(i+1)+dirfloor) + py
+		next_z = mf(dz*(i+1)+dirfloor) + pz
+
+	end
+end
+
+
+function cozylights:lightcast_darken_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	local halfrad = radius/2
+	local braking_brak = false
+	local next_x = mf(dx+dirfloor) + px
+	local next_y = mf(dy+dirfloor) + py
+	local next_z = mf(dz+dirfloor) + pz
+	for i = 1, radius do
+		local x = next_x
+		local y = next_y
+		local z = next_z
+		local idx = a:index(x,y,z)
+		for n = 1, 6 do
+			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
+				braking_brak = true
+				break
+			end
+		end
+		if braking_brak == true then
+			break
+		end
+		x,y,z = nil,nil,nil -- they are probably still allocated though
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			-- appears that hash lookup in a loop is as bad as math
+			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+				if i < halfrad then
+					if not visited_pos[idx] then
+						visited_pos[idx] = true
+						local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+						if c_lights[dim] < cid then
+							local original_light = cid - c_light1
+							dim = mf((dim + original_light)/2)
+							data[idx] = c_lights[dim]
+							param2data[idx] = dim
+						end
+					end
+				else
+					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+					if c_lights[dim] < cid then
+						local original_light = cid - c_light1
+						dim = mf((dim + original_light)/2)
+						data[idx] = c_lights[dim]
+						param2data[idx] = dim
+					end
+				end
+			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+
+		next_x = mf(dx*(i+1)+dirfloor) + px
+		next_y = mf(dy*(i+1)+dirfloor) + py
+		next_z = mf(dz*(i+1)+dirfloor) + pz
 
 	end
 end

@@ -4,16 +4,16 @@ for i=1, minetest.LIGHT_MAX do
 		description = "Light Source "..i,
 		paramtype = "light",
 		light_source = i,
-		tiles ={"invisible.png"},
+		--tiles ={"invisible.png"},
 		drawtype = "airlike",
 		walkable = false,
 		sunlight_propagates = true,
 		is_ground_content = false,
 		buildable_to = true,
 		pointable = false,
-		groups = {dig_immediate=3},
+		groups = {dig_immediate=3,not_in_creative_inventory=1},
 		floodable = true,
-		use_texture_alpha="clip"
+		use_texture_alpha="clip",
 	})
 
 end
@@ -29,10 +29,10 @@ for i=1, minetest.LIGHT_MAX do
 		walkable = false,
 		sunlight_propagates = true,
 		is_ground_content = false,
-		buildable_to = true,
+		buildable_to = false,
 		pointable = true,
-		groups = {dig_immediate=3},
+		groups = {dig_immediate=3,not_in_creative_inventory=1},
 		floodable = true,
-		use_texture_alpha="clip"
+		use_texture_alpha="clip",
 	})
 end

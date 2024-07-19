@@ -5,7 +5,7 @@ cozylights = {
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
 	cozy_wielded_light = minetest.settings:get_bool("cozylights_wielded_light", false),
-	override_engine_light_sources = minetest.settings:get_bool("cozylights_override_engine_light_sources", true),
+	override_engine_light_sources = minetest.settings:get_bool("cozylights_override_engine_light_sources", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
 
 	-- this is a table of modifiers for global light source settings.
@@ -81,7 +81,7 @@ dofile(modpath.."/wield_light.lua")
 dofile(modpath.."/node_light.lua")
 dofile(modpath.."/light_brush.lua")
 
-local c_air = 126
+local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
 
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
@@ -222,7 +222,7 @@ end
 
 minetest.register_on_joinplayer(function(player)
 	if not player then return end
-	--player:override_day_night_ratio(0)
+	player:override_day_night_ratio(0)
 	local pos = vector.round(player:getpos())
 	pos.y = pos.y + 1
 	cozylights:on_join_cleanup(pos, 30)
@@ -234,13 +234,12 @@ minetest.register_on_joinplayer(function(player)
 		last_wield="",
 		prev_wielded_lights={},
 		lbrush={
-			pos_hash=0,
-			brightness=8,
-			reach_factor=4,
-			dim_factor=9,
+			brightness=14,
+			radius=0,
+			strength=0.5,
+			mode=1,
 			cover_only_surfaces=0,
-			radius=20,
-			strength=0.5
+			pos_hash=0,
 		}
 	}
 end)
@@ -278,35 +277,36 @@ minetest.register_globalstep(function(dtime)
 			local pos = vector.round(player:getpos())
 			pos.y = pos.y + 1
 			local wield_name = player:get_wielded_item():get_name()
-			local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
-			-- this is click and hold functionality for light brush, right now disabled, because i reworked an algo
-			--[[if wield_name == "cozylights:light_brush" then--todo: checking against a string is expensive, what do
-				local look_dir = player:get_look_dir()
-				local endpos = vector.add(pos, vector.multiply(look_dir, 40))
-				local hitpos
-				for hitpoint in minetest.raycast(pos, endpos, false, false) do
-					if hitpoint.type == "node" then
-						--todo: add setting to brush to combine existing light brightness with brush brightness or ignore
-						hitpos = hitpoint.under
-						break
-					end
-				end
-				if hitpos ~= nil then
-					local control_bits = player:get_player_control_bits()
-					if control_bits >= 128 then
-						local hitpos_hash = hitpos.x + (hitpos.y)*100 + hitpos.z*10000
-						local lb = cozyplayer.lbrush
-						if hitpos_hash ~= lb.pos_hash then
-							lb.pos_hash = hitpos_hash
-							cozylights:draw_brush_light(hitpos, lb.brightness, lb.radius, lb.strength)--draw_node_light(hitpos, 10)
+			--todo: checking against a string is expensive, what do
+			if wield_name == "cozylights:light_brush" then
+				local control_bits = player:get_player_control_bits()
+				if control_bits >= 128 and control_bits < 256 then
+					local lb = cozyplayer.lbrush
+					if lb.radius < 31 then
+						local look_dir = player:get_look_dir()
+						local endpos = vector.add(pos, vector.multiply(look_dir, 100))
+						local hit = minetest.raycast(pos, endpos, false, false):next()
+						if hit then
+							local nodenameunder = minetest.get_node(hit.under).name
+							local nodedefunder = minetest.registered_nodes[nodenameunder]
+							local above = hit.above
+							if nodedefunder.buildable_to == true then
+								above.y = above.y - 1
+							end
+							local above_hash = above.x + (above.y)*100 + above.z*10000
+							if lb.mode == 2 or lb.mode == 4 or lb.mode == 5 or above_hash ~= lb.pos_hash then
+								lb.pos_hash = above_hash
+								cozylights:draw_brush_light(above, lb)
+							end
 						end
 					end
 				end
-			end]]
+			end
+			-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
+			-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
+			local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
 			if wielded_light_enabled == true then
 				if pos_hash ~= cozyplayer.pos_hash then
-					-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
-					-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 
 					if cozylights.cozy_items[wield_name] ~= nil then
 						local vel = vector.round(vector.multiply(player:get_velocity(),step_time))
 						cozylights:draw_wielded_light(
@@ -330,6 +330,7 @@ minetest.register_globalstep(function(dtime)
 		end
 	end
 end)
+
 --[[
 local gent_total = 0
 local gent_count = 0
