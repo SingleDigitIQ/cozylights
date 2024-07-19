@@ -11,9 +11,9 @@ for i=1, minetest.LIGHT_MAX do
 		is_ground_content = false,
 		buildable_to = true,
 		pointable = false,
-		groups = {dig_immediate=3},
+		groups = {dig_immediate=3,not_in_creative_inventory=1},
 		floodable = true,
-		use_texture_alpha="clip"
+		use_texture_alpha="clip",
 	})
 
 end
@@ -31,8 +31,8 @@ for i=1, minetest.LIGHT_MAX do
 		is_ground_content = false,
 		buildable_to = false,
 		pointable = true,
-		groups = {dig_immediate=3},
+		groups = {dig_immediate=3,not_in_creative_inventory=1},
 		floodable = true,
-		use_texture_alpha="clip"
+		use_texture_alpha="clip",
 	})
 end

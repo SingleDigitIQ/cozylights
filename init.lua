@@ -281,21 +281,23 @@ minetest.register_globalstep(function(dtime)
 			if wield_name == "cozylights:light_brush" then
 				local control_bits = player:get_player_control_bits()
 				if control_bits >= 128 and control_bits < 256 then
-					local look_dir = player:get_look_dir()
-					local endpos = vector.add(pos, vector.multiply(look_dir, 100))
-					local hit = minetest.raycast(pos, endpos, false, false):next()
-					if hit then
-						local nodenameunder = minetest.get_node(hit.under).name
-						local nodedefunder = minetest.registered_nodes[nodenameunder]
-						local lb = cozyplayer.lbrush
-						local above = hit.above
-						if nodedefunder.buildable_to == true then
-							above.y = above.y - 1
-						end
-						local above_hash = above.x + (above.y)*100 + above.z*10000
-						if lb.mode == 2 or lb.mode == 4 or lb.mode == 5 or above_hash ~= lb.pos_hash then
-							lb.pos_hash = above_hash
-							cozylights:draw_brush_light(above, lb)
+					local lb = cozyplayer.lbrush
+					if lb.radius < 31 then
+						local look_dir = player:get_look_dir()
+						local endpos = vector.add(pos, vector.multiply(look_dir, 100))
+						local hit = minetest.raycast(pos, endpos, false, false):next()
+						if hit then
+							local nodenameunder = minetest.get_node(hit.under).name
+							local nodedefunder = minetest.registered_nodes[nodenameunder]
+							local above = hit.above
+							if nodedefunder.buildable_to == true then
+								above.y = above.y - 1
+							end
+							local above_hash = above.x + (above.y)*100 + above.z*10000
+							if lb.mode == 2 or lb.mode == 4 or lb.mode == 5 or above_hash ~= lb.pos_hash then
+								lb.pos_hash = above_hash
+								cozylights:draw_brush_light(above, lb)
+							end
 						end
 					end
 				end
