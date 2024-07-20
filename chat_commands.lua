@@ -4,7 +4,8 @@ local c_light1 = minetest.get_content_id("cozylights:light1")
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
 	c_light1 + 7, c_light1 + 8, c_light1 + 9, c_light1 + 10, c_light1 + 11, c_light1 + 12, c_light1 + 13 }
 local c_light14 = c_lights[14]
-local c_light_debug14 = minetest.get_content_id("cozylights:light_debug14")
+local c_light_debug1 = minetest.get_content_id("cozylights:light_debug1")
+local c_light_debug14 = c_light_debug1 + 13
 
 local mf = math.floor
 
@@ -258,7 +259,22 @@ local cozyadjust = {
 					data[i] = c_air
 					param2data[i] = 0
 				end
+			elseif cid >= c_light_debug1 and cid <= c_light_debug14 then
+				local precid = cid + adjust_by
+				if precid >= c_light_debug1 and precid <= c_light_debug14 then
+					data[i] = precid
+					param2data[i] = precid
+				elseif keep_map == 1 then
+					return false, "Aborted to preserve light map."
+				elseif precid > c_light_debug14 then
+					data[i] = c_light_debug14
+					param2data[i] = c_light_debug14
+				else
+					data[i] = c_air
+					param2data[i] = 0
+				end
 			end
+
 		end
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
