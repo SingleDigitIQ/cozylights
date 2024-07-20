@@ -105,7 +105,7 @@ minetest.register_on_mods_loaded(function()
 	local cozytest = {}
 	local override = cozylights.override_engine_light_sources
 	for _,def in pairs(minetest.registered_items) do
-		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" then
+		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
 			local mods = nil
 			if def.drawtype == "plantlike" then
 				mods = 1
@@ -127,7 +127,7 @@ minetest.register_on_mods_loaded(function()
 			local cid = minetest.get_content_id(def.name)
 			cozycids_sunlight_propagates[cid] = true
 		end
-		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" then
+		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
 			local cid = minetest.get_content_id(def.name)
 			if cid < c_lights[1] or cid > c_lights[14]+14 then
 				cozycids_light_sources[cid] = true
