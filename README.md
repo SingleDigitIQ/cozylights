@@ -52,11 +52,27 @@ Currently max radius is 120 for these commands, and for some it's less than that
 
 ```/optimizeformobile <number>``` removes all cozy light nodes which do not touch a surface of some visible node, like cobble for example. It is maybe useful, because default algo spreads light in a sphere and lights up the air above the ground too, which might be a bit challenging for potato and mobile to render reliably, they might experience FPS drops. Good if you are building a schematic for a multiplayer server. This option might slightly decrease the quality of light map, example: you have a light node with strength of 7 above the ground, and that ground is visible because of that, but after using this option that light node will be removed, so that part of the ground might be left in complete darkness. Basically might make some places darker.
 
-```/spawnlight <brightness float> <reach_factor float> <dim_factor float>``` spawn a light at your position which does not use user friendly light brush algo, but ambient light algo.
+```/spawnlight <brightness float> <reach_factor float> <dim_factor float>``` spawn a light at your position which does not use user friendly light brush algo, but ambient light algo. "float" means it can be with some arbitrary amount of decimals, or simple integer
 
 ```/cozysettings <brightness float or ~> <reach_factor float or ~> <dim_factor float or ~>``` change global settings for node light sources like torches, meselamps, fireflies, etc. Put ```~``` instead of a float and previous setting for that value will remain unchanged. This change persists after exiting and re-entering the world again.
 
 ```/daynightratio <ratio float>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
+
+```/cozyadjust <size number> <adjust_by number> <keep_map number>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
+
+
+Shortcuts for all commands follow a convention to easier memorize them:
+```zcl``` - clearlights
+```zrl``` - rebuildlights
+```zfe``` - fixedges
+```zdon``` - cozydebugon
+```zdoff``` - cozydebugoff
+```zofm``` - optimizeformobile
+```zsl``` - spawnlight
+```zs``` - cozysettings
+```zdnr``` - daynightratio
+```za``` - cozyadjust
+
 
 ## For Developers
 
