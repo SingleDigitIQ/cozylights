@@ -6,7 +6,7 @@ local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 
 local c_light14 = c_lights[14]
 local c_light_debug14 = minetest.get_content_id("cozylights:light_debug14")
 
-minetest.register_chatcommand("clearlights", {
+local clearlights = {
 	params = "<size>",
 	description = "removes cozy and debug light nodes",
 	func = function(name, param)
@@ -27,10 +27,9 @@ minetest.register_chatcommand("clearlights", {
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
-})
+}
 
-
-minetest.register_chatcommand("rebuildlights", {
+local rebuildlights = {
 	params = "<size>",
 	description = "force rebuilds lights in the area",
 	func = function(name, param)
@@ -54,9 +53,9 @@ minetest.register_chatcommand("rebuildlights", {
 		--cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
-})
+}
 
-minetest.register_chatcommand("fixedges", {
+local fixedges = {
 	params = "<size>",
 	description = "fixes edges for all lights in the area",
 	func = function(name, param)
@@ -73,9 +72,9 @@ minetest.register_chatcommand("fixedges", {
 		end
 		return true, "Done."
 	end,
-})
+}
 
-minetest.register_chatcommand("cozydebugon", {
+local cozydebugon = {
 	params = "<size>",
 	description = "replaces cozy light nodes with debug light nodes which are visible and interactable in an area",
 	func = function(name, param)
@@ -95,9 +94,9 @@ minetest.register_chatcommand("cozydebugon", {
 		cozylights:setVoxelManipData(vm,data)
 		return true, "Done."
 	end,
-})
+}
 
-minetest.register_chatcommand("cozydebugoff", {
+local cozydebugoff = {
 	params = "<size>",
 	description = "replaces debug light nodes back with cozy light nodes in an area",
 	func = function(name, param)
@@ -117,9 +116,9 @@ minetest.register_chatcommand("cozydebugoff", {
 		cozylights:setVoxelManipData(vm,data)
 		return true, "Done."
 	end,
-})
+}
 
-minetest.register_chatcommand("optimizeformobile", {
+local optimizeformobile = {
 	params = "<size>",
 	description = "optimizes schematic for mobile and potato gpu",
 	func = function(name, param)
@@ -161,9 +160,9 @@ minetest.register_chatcommand("optimizeformobile", {
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
-})
+}
 
-minetest.register_chatcommand("spawnlight", {
+local spawnlight = {
 	params = "<brightness> <radius> <strength>",
 	description = "spawns light_brush-like light with given characteristics at player position",
 	func = function(name, param)
@@ -180,9 +179,9 @@ minetest.register_chatcommand("spawnlight", {
 		cozylights:draw_brush_light(pos, lb)
 		return true, "Done."
 	end,
-})
+}
 
-minetest.register_chatcommand("cozysettings", {
+local cozysettings = {
 	params = "<brightness> <reach_factor> <dim_factor>",
 	privs = {},
 	description = "changes global ambient light settings",
@@ -202,10 +201,24 @@ minetest.register_chatcommand("cozysettings", {
 		end
 		return true, "set brightness as "..brightness_..", reach_factor as "..reach_factor_..", dim_factor as "..dim_factor_
 	end,
-})
+}
 
+local daynightratio = {
+	params = "<ratio>",
+	description = "fixes old schematic torches alignment to walls and what not",
+	func = function(name, param)
+		local player = minetest.get_player_by_name(name)
+		local pos = vector.round(player:getpos())
+		local ratio = tonumber(param)
+		minetest.log("action", name .. " uses /daynightratio "..ratio.." at position: "..dump(pos))
+		if ratio > 1.0 then	ratio = 1 end
+		if ratio < 0 then ratio = 0 end
+		player:override_day_night_ratio(ratio)
+		return true, "Done."
+	end,
+}
 
-minetest.register_chatcommand("fixtorches", {
+local fixtorches = {
 	params = "<size>",
 	description = "fixes old schematic torches alignment to walls and what not",
 	func = function(name, param)
@@ -251,20 +264,34 @@ minetest.register_chatcommand("fixtorches", {
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
-})
+}
 
+minetest.register_chatcommand("clearlights", clearlights)
+minetest.register_chatcommand("zcl", clearlights)
 
-minetest.register_chatcommand("daynightratio", {
-	params = "<ratio>",
-	description = "fixes old schematic torches alignment to walls and what not",
-	func = function(name, param)
-		local player = minetest.get_player_by_name(name)
-		local pos = vector.round(player:getpos())
-		local ratio = tonumber(param)
-		minetest.log("action", name .. " uses /daynightratio "..ratio.." at position: "..dump(pos))
-		if ratio > 1.0 then	ratio = 1 end
-		if ratio < 0 then ratio = 0 end
-		player:override_day_night_ratio(ratio)
-		return true, "Done."
-	end,
-})
+minetest.register_chatcommand("rebuildlights", rebuildlights)
+minetest.register_chatcommand("zrl", rebuildlights)
+
+minetest.register_chatcommand("fixedges", fixedges)
+minetest.register_chatcommand("zfe", fixedges)
+
+minetest.register_chatcommand("cozydebugon", cozydebugon)
+minetest.register_chatcommand("zdon", cozydebugon)
+
+minetest.register_chatcommand("cozydebugoff", cozydebugoff)
+minetest.register_chatcommand("zdoff", cozydebugoff)
+
+minetest.register_chatcommand("optimizeformobile", optimizeformobile)
+minetest.register_chatcommand("zofm", optimizeformobile)
+
+minetest.register_chatcommand("spawnlight", spawnlight)
+minetest.register_chatcommand("zsl", spawnlight)
+
+minetest.register_chatcommand("cozysettings", cozysettings)
+minetest.register_chatcommand("zs", cozysettings)
+
+minetest.register_chatcommand("daynightratio", daynightratio)
+minetest.register_chatcommand("zdnr", daynightratio)
+
+minetest.register_chatcommand("fixtorches", fixtorches)
+minetest.register_chatcommand("zft", fixtorches)

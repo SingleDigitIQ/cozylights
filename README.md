@@ -72,9 +72,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 # todo
 
-- add erase mode for light brush
-
-- chat command shortcuts
+- add literally all mods and games with light_source def to optional depends
 
 - add inventory images for lights and debug lights, make them only available in creative
 
@@ -133,6 +131,8 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - add global step override api, ability to implement cozylights global step into a game/other mod global step more efficiently, maybe add generic global step call like mainloop or mainstep, see what other games do with it, choose or create convention for this i guess
 
 - add handle_async where it makes sense
+
+- ci for optional_depends auto update according to content db mods/games updates and releases
 
 LICENSE
 
