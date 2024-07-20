@@ -42,13 +42,16 @@ minetest.register_chatcommand("rebuildlights", {
 			return false, "Radius is too big"
 		end
 		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.cozy_nodes)
-		local _,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size+25)
+		print(#posrebuilds)
+
+		--local _,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size+25)
 		for i=1,#posrebuilds, 1 do
 			local p = posrebuilds[i]
 			local node = minetest.get_node(p)
-			cozylights:draw_node_light(p, cozylights.cozy_items[node.name],vm,a,data,param2data)
+			print(dump(node))
+		--	cozylights:draw_node_light(p, cozylights.cozy_items[node.name],vm,a,data,param2data)
 		end
-		cozylights:setVoxelManipData(vm,data,param2data,true)
+		--cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
 })

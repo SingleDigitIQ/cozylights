@@ -169,6 +169,6 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	cozyplayer.last_wield_radius = radius
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	--minetest.chat_send_all("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	--print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 

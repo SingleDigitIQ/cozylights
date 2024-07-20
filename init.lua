@@ -126,16 +126,16 @@ minetest.register_on_mods_loaded(function()
 					minetest.override_item(node,{
 						on_destruct = function(pos)
 							base_on_destruct(pos)
-							minetest.chat_send_all(dump(pos))
-							minetest.chat_send_all(def.name.." is being destroyed")
+							print(dump(pos))
+							print(def.name.." is being destroyed")
 							cozylights:destroy_light(pos, cozy_items[def.name])
 						end,
 					})
 				else
 					minetest.override_item(node,{
 						on_destruct = function(pos)
-							minetest.chat_send_all(dump(pos))
-							minetest.chat_send_all(def.name.." is being destroyed1")
+							print(dump(pos))
+							print(def.name.." is being destroyed1")
 							cozylights:destroy_light(pos, cozy_items[def.name])
 						end,
 					})
@@ -222,7 +222,6 @@ end
 
 minetest.register_on_joinplayer(function(player)
 	if not player then return end
-	player:override_day_night_ratio(0)
 	local pos = vector.round(player:getpos())
 	pos.y = pos.y + 1
 	cozylights:on_join_cleanup(pos, 30)
@@ -324,7 +323,7 @@ minetest.register_globalstep(function(dtime)
 					cozyplayer.last_wield = wield_name
 					total_step_time = total_step_time + mf((os.clock() - t) * 1000)
 					total_step_count = total_step_count + 1
-					--minetest.chat_send_all("Average wielded cozy light step time " .. mf(total_step_time/total_step_count) .. " ms. Sample of: "..total_step_count)
+					--print("Average wielded cozy light step time " .. mf(total_step_time/total_step_count) .. " ms. Sample of: "..total_step_count)
 				end
 			end
 		end
@@ -351,7 +350,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	cozylights:setVoxelManipData(vm,data,param2data,true)
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	minetest.chat_send_all("Average mapchunk generation time " .. gent_total/gent_count .. " ms. Sample of: "..gent_count)
+	print("Average mapchunk generation time " .. gent_total/gent_count .. " ms. Sample of: "..gent_count)
 	--if needsFix == 1 then
 	--	cozylights.area_queue[#cozylights.area_queue+1]={minp=minp, maxp=maxp}
 	--end

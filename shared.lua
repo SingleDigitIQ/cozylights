@@ -43,16 +43,16 @@ function cozylights:slice_cake(surface,radius)
 	return sliced
 end
 
---somewhat adapted from worldedit code
+-- radius*radius = x*x + y*y + z*z
 function cozylights:get_sphere_surface(radius,sliced)
 	if sphere_surfaces[radius] == nil then
 		local sphere_surface = {}
-		local min_radius, max_radius = radius * (radius - 1), radius * (radius + 1)
+		local rad_pow2_min, rad_pow2_max = radius * (radius - 1), radius * (radius + 1)
 		for z = -radius, radius do
 			for y = -radius, radius do
 				for x = -radius, radius do
-					local squared = x * x + y * y + z * z
-					if squared >= min_radius and squared <= max_radius then
+					local pow2 = x * x + y * y + z * z
+					if pow2 >= rad_pow2_min and pow2 <= rad_pow2_max then
 						-- todo: could arrange these in a more preferable for optimization order
 						sphere_surface[#sphere_surface+1] = {x=x,y=y,z=z}
 					end
@@ -90,7 +90,7 @@ function cozylights:calc_dims(cozy_item)
 	end
 	local max_light = mf(cozy_item.light_source + cozylights.brightness + brightness_mod)
 	local r = mf(max_light*max_light/10*(cozylights.reach_factor+reach_mod))
-	minetest.chat_send_all("initial r: "..r)
+	print("initial r: "..r)
 	local r_max = 0
 	local dim_levels = {}
 	local dim_factor = cozylights.dim_factor + dim_mod
@@ -124,7 +124,7 @@ local cozycids_sunlight_propagates = {}
 minetest.after(1, function()
 	cozycids_sunlight_propagates = cozylights.cozycids_sunlight_propagates
 	finalize(cozycids_sunlight_propagates)
-	minetest.chat_send_all(#cozycids_sunlight_propagates)
+	print(#cozycids_sunlight_propagates)
 end)
 
 -- adjusting dirfloor might help with some nodes missing. probably the only acceptable way to to eliminate node
@@ -136,8 +136,8 @@ local dirfloor = 0.5
 -- not to forget: what i mean by that is that + 0.5 in mf has to become a variable
 
 -- while we have the opportunity to cut the amount of same node reruns in this loop,
--- we avoid that because luajit optimization breaks with one more hashtable look up
--- and it becomes slower to run and at the same time grabs more memory
+-- we avoid that because luajit optimization breaks with one more branch and hashtable look up
+-- at least on my machine, and so it becomes slower to run and at the same time grabs more memory
 -- todo: actually check for the forth time the above is real
 function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels)
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
@@ -157,6 +157,32 @@ function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels)
 					param2data[idx] = dim
 				end
 			else
+				light_nerf = 1
+			end
+		else
+			break
+		end
+	end
+end
+
+function cozylights:lightcast_erase(pos, dir, radius,data,param2data,a,dim_levels)
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	for i = 1, radius do
+		local x = mf(dx*i+dirfloor) + px
+		local y = mf(dy*i+dirfloor) + py
+		local z = mf(dz*i+dirfloor) + pz
+		local idx = a:index(x,y,z)
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			if cid >= c_light1 and cid <= c_light14 then
+				local dim = (dim_levels[i] - light_nerf) >= 0 and (dim_levels[i] - light_nerf) or 0
+				local light = dim > 0 and c_lights[dim] or c_air
+				if light < cid then
+					data[idx] = light
+					param2data[idx] = dim
+				end
+			elseif cid ~= c_air then
 				light_nerf = 1
 			end
 		else
@@ -251,7 +277,7 @@ function cozylights:lightcast_darken(pos, dir, radius,data,param2data,a,dim_leve
 		local idx = a:index(x,y,z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid >= c_light1 and cid <= c_light14 then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				if c_lights[dim] < cid then
 					local original_light = cid - c_light1
@@ -259,7 +285,7 @@ function cozylights:lightcast_darken(pos, dir, radius,data,param2data,a,dim_leve
 					data[idx] = c_lights[dim]
 					param2data[idx] = dim
 				end
-			else
+			elseif cid ~= c_air then
 				light_nerf = 1
 			end
 		else
@@ -275,15 +301,10 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
 	local light_nerf = 0
-	local halfrad = radius/2
-	local braking_brak = false
-	local next_x = mf(dx+dirfloor) + px
-	local next_y = mf(dy+dirfloor) + py
-	local next_z = mf(dz+dirfloor) + pz
+	local halfrad, braking_brak = radius/2, false
+	local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
 	for i = 1, radius do
-		local x = next_x
-		local y = next_y
-		local z = next_z
+		local x,y,z = next_x, next_y, next_z
 		local idx = a:index(x,y,z)
 		for n = 1, 6 do
 			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
@@ -291,9 +312,7 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 				break
 			end
 		end
-		if braking_brak == true then
-			break
-		end
+		if braking_brak == true then break end
 		x,y,z = nil,nil,nil
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
@@ -323,11 +342,7 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 		else
 			break
 		end
-
-		next_x = mf(dx*(i+1)+dirfloor) + px
-		next_y = mf(dy*(i+1)+dirfloor) + py
-		next_z = mf(dz*(i+1)+dirfloor) + pz
-
+		next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
 		--local next_adj_indxs = {
 		--	a:index(next_x,y,z),
 		--	a:index(x,y,next_z),
@@ -346,16 +361,61 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 	end
 end
 
+function cozylights:lightcast_erase_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
+	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
+	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
+	local light_nerf = 0
+	local halfrad, braking_brak = radius/2, false
+	local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
+	for i = 1, radius do
+		local x,y,z = next_x, next_y, next_z
+		local idx = a:index(x,y,z)
+		for n = 1, 6 do
+			if cozycids_sunlight_propagates[data[idx+dirs[n]]] == nil then
+				braking_brak = true
+				break
+			end
+		end
+		if braking_brak == true then break end
+		x,y,z = nil,nil,nil
+		local cid = data[idx]
+		if cozycids_sunlight_propagates[cid] == true then
+			-- appears that hash lookup in a loop is as bad as math
+			if cid >= c_light1 and cid <= c_light14 then
+				if i < halfrad then
+					if not visited_pos[idx] then
+						visited_pos[idx] = true
+						local dim = (dim_levels[i] - light_nerf) >= 0 and (dim_levels[i] - light_nerf) or 0
+						local light = dim > 0 and c_lights[dim] or c_air
+						if light < cid then
+							data[idx] = light
+							param2data[idx] = dim
+						end
+					end
+				else
+					local dim = (dim_levels[i] - light_nerf) >= 0 and (dim_levels[i] - light_nerf) or 0
+					local light = dim > 0 and c_lights[dim] or c_air
+					if light < cid then
+						data[idx] = light
+						param2data[idx] = dim
+					end
+				end
+			elseif cid ~= c_air then
+				light_nerf = 1
+			end
+		else
+			break
+		end
+		next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
+	end
+end
 
 function cozylights:lightcast_blend_fix_edges(pos, dir, radius,data,param2data,a,dim_levels,visited_pos)
 	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
 	local light_nerf = 0
-	local halfrad = radius/2
-	local braking_brak = false
-	local next_x = mf(dx+dirfloor) + px
-	local next_y = mf(dy+dirfloor) + py
-	local next_z = mf(dz+dirfloor) + pz
+	local halfrad, braking_brak = radius/2, false
+	local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
 	for i = 1, radius do
 		local x = next_x
 		local y = next_y
@@ -367,9 +427,7 @@ function cozylights:lightcast_blend_fix_edges(pos, dir, radius,data,param2data,a
 				break
 			end
 		end
-		if braking_brak == true then
-			break
-		end
+		if braking_brak == true then break end
 		x,y,z = nil,nil,nil -- they are probably still allocated though
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
@@ -400,9 +458,7 @@ function cozylights:lightcast_blend_fix_edges(pos, dir, radius,data,param2data,a
 			break
 		end
 
-		next_x = mf(dx*(i+1)+dirfloor) + px
-		next_y = mf(dy*(i+1)+dirfloor) + py
-		next_z = mf(dz*(i+1)+dirfloor) + pz
+next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
 
 	end
 end
@@ -411,11 +467,8 @@ function cozylights:lightcast_override_fix_edges(pos, dir, radius,data,param2dat
 	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
 	local light_nerf = 0
-	local halfrad = radius/2
-	local braking_brak = false
-	local next_x = mf(dx+dirfloor) + px
-	local next_y = mf(dy+dirfloor) + py
-	local next_z = mf(dz+dirfloor) + pz
+	local halfrad, braking_brak = radius/2, false
+local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
 	for i = 1, radius do
 		local x = next_x
 		local y = next_y
@@ -427,9 +480,7 @@ function cozylights:lightcast_override_fix_edges(pos, dir, radius,data,param2dat
 				break
 			end
 		end
-		if braking_brak == true then
-			break
-		end
+		if braking_brak == true then break end
 		x,y,z = nil,nil,nil -- they are probably still allocated though
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
@@ -454,9 +505,7 @@ function cozylights:lightcast_override_fix_edges(pos, dir, radius,data,param2dat
 			break
 		end
 
-		next_x = mf(dx*(i+1)+dirfloor) + px
-		next_y = mf(dy*(i+1)+dirfloor) + py
-		next_z = mf(dz*(i+1)+dirfloor) + pz
+next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
 
 	end
 end
@@ -466,11 +515,8 @@ function cozylights:lightcast_lighten_fix_edges(pos, dir, radius,data,param2data
 	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
 	local light_nerf = 0
-	local halfrad = radius/2
-	local braking_brak = false
-	local next_x = mf(dx+dirfloor) + px
-	local next_y = mf(dy+dirfloor) + py
-	local next_z = mf(dz+dirfloor) + pz
+	local halfrad, braking_brak = radius/2, false
+local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
 	for i = 1, radius do
 		local x = next_x
 		local y = next_y
@@ -482,9 +528,7 @@ function cozylights:lightcast_lighten_fix_edges(pos, dir, radius,data,param2data
 				break
 			end
 		end
-		if braking_brak == true then
-			break
-		end
+		if braking_brak == true then break end
 		x,y,z = nil,nil,nil -- they are probably still allocated though
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
@@ -517,9 +561,7 @@ function cozylights:lightcast_lighten_fix_edges(pos, dir, radius,data,param2data
 			break
 		end
 
-		next_x = mf(dx*(i+1)+dirfloor) + px
-		next_y = mf(dy*(i+1)+dirfloor) + py
-		next_z = mf(dz*(i+1)+dirfloor) + pz
+next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
 
 	end
 end
@@ -529,11 +571,8 @@ function cozylights:lightcast_darken_fix_edges(pos, dir, radius,data,param2data,
 	local dirs = { -1*a.ystride, 1*a.ystride,-1,1,-1*a.zstride,1*a.zstride}
 	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
 	local light_nerf = 0
-	local halfrad = radius/2
-	local braking_brak = false
-	local next_x = mf(dx+dirfloor) + px
-	local next_y = mf(dy+dirfloor) + py
-	local next_z = mf(dz+dirfloor) + pz
+	local halfrad, braking_brak = radius/2, false
+local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
 	for i = 1, radius do
 		local x = next_x
 		local y = next_y
@@ -545,9 +584,7 @@ function cozylights:lightcast_darken_fix_edges(pos, dir, radius,data,param2data,
 				break
 			end
 		end
-		if braking_brak == true then
-			break
-		end
+		if braking_brak == true then break end
 		x,y,z = nil,nil,nil -- they are probably still allocated though
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
@@ -580,9 +617,7 @@ function cozylights:lightcast_darken_fix_edges(pos, dir, radius,data,param2data,
 			break
 		end
 
-		next_x = mf(dx*(i+1)+dirfloor) + px
-		next_y = mf(dy*(i+1)+dirfloor) + py
-		next_z = mf(dz*(i+1)+dirfloor) + pz
+next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
 
 	end
 end

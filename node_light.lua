@@ -37,8 +37,8 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
 	
-	minetest.chat_send_all("dim_levels: "..dump(dim_levels))
-	minetest.chat_send_all("spreading light over a sphere with radius of "..radius)
+	print("dim_levels: "..dump(dim_levels))
+	print("spreading light over a sphere with radius of "..radius)
 	if vm == nil then
 		_,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos,radius)
 		update_needed = 1
@@ -75,7 +75,7 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 	end
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	minetest.chat_send_all("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 
 function cozylights:destroy_light(pos, cozy_item)
@@ -120,12 +120,12 @@ function cozylights:destroy_light(pos, cozy_item)
 	
 	remt_total = remt_total + mf((os.clock() - t) * 1000)
 	remt_count = remt_count + 1
-	minetest.chat_send_all("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
+	print("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
 end
 
 function cozylights:rebuild_light(pos, cozy_item,vm,a,data,param2data)
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
-	minetest.chat_send_all("rebuilding light for position "..dump(pos))
+	print("rebuilding light for position "..dump(pos))
 	local sphere_surface = cozylights:get_sphere_surface(radius)
 	local ylvl = 1
 	local cid = data[a:index(pos.x,pos.y-1,pos.z)]
