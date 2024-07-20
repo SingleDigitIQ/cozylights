@@ -20,12 +20,14 @@ local function on_secondary_use(user)
 		"tooltip[1.5,2.6;3,0.8;Strength, can be from 0 to 1, decimal values of any precision are valid.\n"..
 			"Determines how bright(relative to brightness setting) light nodes in affected area will be.;"..bgcolor..";#FFFFFF]",
 		"label[1.5,3.6;brush mode]",
-		"dropdown[1.5,3.8;3,0.5;mode;default,blend,override,lighten,darken;"..lb.mode.."]",
-		"tooltip[1.5,3.5;3,0.8;\nDefault - replace only darker light nodes with brush.\n\n"..
-			"Blend - blend affected nodes' brigthness with brush brigthness.\nEven though behaves correctly, as of now looks weird and unintuitive if radius is not 0.\n\n"..
+		"dropdown[1.5,3.8;3,0.5;mode;default,erase,override,lighten,darken,blend;"..lb.mode.."]",
+		"tooltip[1.5,3.5;3,0.8;\nDefault - replace only dimmer light nodes or air with brush.\n\n"..
+			"Erase - inverse of default, replaces only lighter nodes with darker nodes or air if brightness is 0.\n\n"..	
 			"Override - set light nodes as brush settings dictate regardless of difference in brigthness.\n\n"..
 			"Lighten - milder than default mode.\n\n"..
-			"Darken - mild darkening.;"..bgcolor..";#FFFFFF]",
+			"Darken - milder erase, does not darken below light 1(does not replace with air).\n\n"..
+			"Blend - blend affected nodes' brigthness with brush brigthness.\n"..
+			"Even though behaves correctly, as of now looks weird and unintuitive if radius is not 0.;"..bgcolor..";#FFFFFF]",
 		--"checkbox[1.7,4.6;cover_only_surfaces;cover only surfaces;"..(lb.cover_only_surfaces == 1 and "true" or "false").."]",
 		--"tooltip[1.7,4.4;2.6,0.4;if enabled brush will not fill up the air with light above the ground;"..bgcolor..";#FFFFFF]",
 		--"button_exit[1,5.1;4,0.8;confirm;Confirm]",
@@ -84,15 +86,17 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if fields.mode then
 		local mode = fields.mode
-		local idx = 5
+		local idx = 6
 		if mode == "default" then
 			idx = 1
-		elseif mode == "blend" then
+		elseif mode == "erase" then
 			idx = 2
 		elseif mode == "override" then
 			idx = 3
 		elseif mode == "lighten" then
 			idx = 4
+		elseif mode == "darken" then
+			idx = 5
 		end
 		lb.mode = idx
 	end
@@ -101,7 +105,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end
   end)
 
-local function calc_dims_for_brush(brightness, radius, strength)
+local function calc_dims_for_brush(brightness, radius, strength, even)
 	local dim_levels = {}
 	--- this gradient attempts to get more colors, but that looks like a super weird monochrome rainbow and immersion braking
 	--strength = (strength+0.05)*2
@@ -117,21 +121,31 @@ local function calc_dims_for_brush(brightness, radius, strength)
 	--	end
 	--end
 	--- this gradient drops brightness fast but spreads dimmer lights over farther
+	if strength == 1 then
+		even = true
+	end
 	strength = strength*5
 	dim_levels[1] = brightness
-	for i = 2, radius do
-		local dim = math.sqrt(math.sqrt(i)) * (6-strength)
-		local light_i = mf(brightness - dim)
-		if light_i > 0 then
-			if light_i < 15 then
-				dim_levels[i] = light_i
+	if even ~= true then
+		for i = 2, radius do
+			local dim = math.sqrt(math.sqrt(i)) * (6-strength)
+			local light_i = mf(brightness - dim)
+			if light_i > 0 then
+				if light_i < 15 then
+					dim_levels[i] = light_i
+				else
+					dim_levels[i] = 14
+				end
 			else
-				dim_levels[i] = 14
+				dim_levels[i] = 1
 			end
-		else
-			dim_levels[i] = 1
+		end
+	else
+		for i = 2, radius do
+			dim_levels[i] = brightness
 		end
 	end
+
 	return dim_levels
 end
 
@@ -149,7 +163,7 @@ local function draw_one_node(pos,lb)
 	if brightness == 0 then
 		new_node_name = "air"
 	end
-	minetest.chat_send_all(node.name)
+	print(node.name)
 	if node.name == "air" and new_node_name ~= node.name then
 		minetest.set_node(
 			pos,
@@ -162,14 +176,8 @@ local function draw_one_node(pos,lb)
 	end
 	if string.find(node.name,"cozylights:") then
 		if lb.mode == 1 and brightness <= node.param2 then return end
-		if lb.mode == 2 then
-			brightness = mf((brightness+node.param2)/2+0.5)
-			new_node_name = "cozylights:light"..brightness
-			if brightness < 0 then
-				brightness = 0
-				new_node_name = "air"
-			end
-		elseif lb.mode == 4 then
+		if lb.mode == 2 and brightness >= node.param2 then return end
+		if lb.mode == 4 then
 			if brightness <= node.param2 then return end
 			brightness = mf((brightness+node.param2)/2+0.5)
 			if brightness < 1 then return end
@@ -179,6 +187,13 @@ local function draw_one_node(pos,lb)
 			brightness = mf((brightness+node.param2)/2)
 			new_node_name = "cozylights:light"..brightness
 			if brightness < 1 then
+				brightness = 0
+				new_node_name = "air"
+			end
+		elseif lb.mode == 6 then
+			brightness = mf((brightness+node.param2)/2+0.5)
+			new_node_name = "cozylights:light"..brightness
+			if brightness < 0 then
 				brightness = 0
 				new_node_name = "air"
 			end
@@ -203,9 +218,10 @@ function cozylights:draw_brush_light(pos, lb)
 		draw_one_node(pos,lb)
 		return
 	end
+	local mode = lb.mode
 	local brightness = lb.brightness
-	local dim_levels = calc_dims_for_brush(brightness, radius, lb.strength)
-	minetest.chat_send_all("dim_levels:"..dump(dim_levels))
+	local dim_levels = calc_dims_for_brush(brightness,radius,lb.strength, mode==2 and true or false)
+	print("dim_levels:"..dump(dim_levels))
 	local vm  = minetest.get_voxel_manip()
 	local emin, emax = vm:read_from_map(vector.subtract(pos, radius+1), vector.add(pos, radius+1))
 	local data = vm:get_data()
@@ -228,10 +244,9 @@ function cozylights:draw_brush_light(pos, lb)
 		return
 	end
 	pos.y = pos.y + ylvl
-	data[a:indexp(pos)] = c_lights[brightness]
-	if lb.mode == 1 then
+	--data[a:indexp(pos)] = c_lights[brightness]
+	if mode == 1 then
 		if cozylights.always_fix_edges == true then
-			minetest.chat_send_all("running with fix edges enabled")
 			local visited_pos = {}
 			for i,pos2 in ipairs(sphere_surface) do
 				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
@@ -243,23 +258,21 @@ function cozylights:draw_brush_light(pos, lb)
 				cozylights:lightcast(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 			end
 		end
-	elseif lb.mode == 2 then
+	elseif mode == 2 then
 		if cozylights.always_fix_edges == true then
-			minetest.chat_send_all("running with fix edges enabled")
 			local visited_pos = {}
 			for i,pos2 in ipairs(sphere_surface) do
 				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
-				cozylights:lightcast_blend_fix_edges(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels,visited_pos)
+				cozylights:lightcast_erase_fix_edges(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels,visited_pos)
 			end
 		else
 			for i,pos2 in ipairs(sphere_surface) do
 				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
-				cozylights:lightcast_blend(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
+				cozylights:lightcast_erase(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 			end
 		end
-	elseif lb.mode == 3 then
+	elseif mode == 3 then
 		if cozylights.always_fix_edges == true then
-			minetest.chat_send_all("fix edges enabled")
 			local visited_pos = {}
 			for i,pos2 in ipairs(sphere_surface) do
 				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
@@ -271,9 +284,8 @@ function cozylights:draw_brush_light(pos, lb)
 				cozylights:lightcast_override(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 			end
 		end
-	elseif lb.mode == 4 then
+	elseif mode == 4 then
 		if cozylights.always_fix_edges == true then
-			minetest.chat_send_all("fix edges enabled")
 			local visited_pos = {}
 			for i,pos2 in ipairs(sphere_surface) do
 				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
@@ -285,9 +297,8 @@ function cozylights:draw_brush_light(pos, lb)
 				cozylights:lightcast_lighten(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 			end
 		end
-	else
+	elseif mode == 5 then
 		if cozylights.always_fix_edges == true then
-			minetest.chat_send_all("fix edges enabled")
 			local visited_pos = {}
 			for i,pos2 in ipairs(sphere_surface) do
 				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
@@ -299,6 +310,19 @@ function cozylights:draw_brush_light(pos, lb)
 				cozylights:lightcast_darken(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 			end
 		end
+	else
+		if cozylights.always_fix_edges == true then
+			local visited_pos = {}
+			for i,pos2 in ipairs(sphere_surface) do
+				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
+				cozylights:lightcast_blend_fix_edges(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels,visited_pos)
+			end
+		else
+			for i,pos2 in ipairs(sphere_surface) do
+				local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
+				cozylights:lightcast_blend(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
+			end
+		end
 	end
 	vm:set_data(data)
 	vm:set_param2_data(param2data)
@@ -306,5 +330,5 @@ function cozylights:draw_brush_light(pos, lb)
 	vm:write_to_map()
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	minetest.chat_send_all("Average draw time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	print("Average draw time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end

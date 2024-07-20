@@ -9,22 +9,19 @@ dofile("../../../builtin/common/vector.lua")
 local dirfloor = 0.51
 
 local mf = math.floor
--- adapted from worledit (Uberi, Sfan5, khonkhortisan, ShadowNinja, Sebastian Ponce, HybridDog)
+
+-- radius*radius = x*x + y*y + z*z
 local function get_full_sphere(radius)
 	local sphere = {}
-	local count = 0
-	local max_radius = radius * (radius + 1)
-	local offset_x, offset_y, offset_z = 1+radius, 1+radius, 1+radius
-	local stride_z, stride_y = (radius+2)*radius+2, radius+2
+	local count, offset, rad_pow2, stride_y = 0, 1+radius, radius * (radius + 1), radius+2
+	local stride_z = stride_y * stride_y
 	for z = -radius, radius do
-		local new_z = (z + offset_z) * stride_z + 1
 		for y = -radius, radius do
-			local new_y = new_z + (y + offset_y) * stride_y
 			for x = -radius, radius do
-				local squared = x * x + y * y + z * z
-				if squared <= max_radius then
-					local i = new_y + (x + offset_x)
-					if findIn(i,sphere) == false then
+				local pow2 = x * x + y * y + z * z
+				if pow2 <= rad_pow2 then
+					local i = (z + offset) * stride_z + (y + offset) * stride_y + x + offset + 1
+					if sphere[i] ~= true then
 						sphere[i] = true
 						count = count + 1
 					end
@@ -35,15 +32,14 @@ local function get_full_sphere(radius)
 	return sphere, count
 end
 
---somewhat adapted from worldedit code
 local function get_sphere_surface(radius)
 	local sphere_surface = {}
-	local min_radius, max_radius = radius * (radius - 1), radius * (radius + 1)
+	local rad_pow2_min, rad_pow2_max = radius * (radius - 1), radius * (radius + 1)
 	for z = -radius, radius do
 		for y = -radius, radius do
 			for x = -radius, radius do
 				local squared = x * x + y * y + z * z
-				if squared >= min_radius and squared <= max_radius then
+				if squared >= rad_pow2_min and squared <= rad_pow2_max then
 					sphere_surface[#sphere_surface+1] = {x=x,y=y,z=z}
 				end
 			end

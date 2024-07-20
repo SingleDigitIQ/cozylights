@@ -4,11 +4,9 @@ Lights which make everything cozy =^__^=
 
 Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us, good enough for release. Feedback, suggestions, bug reports are very welcome. **At this dev stage Cozy Lights can be good for builders in creative mode**, survival is somewhat maybiyish okayish but not really.
 
-*For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is actually 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
+Voxel light maps are a complete game changer - it is almost like going from 2d to 3d in terms of depth. You now have 14 shades for every visible building block, and it does not have to register 14 versions of every building block. Cobble only challenge has got a whole lot easier, something fun to look at with the least fun texture is possible now with just this mod :> Disabling smooth lighting might can make for an interesting aesthetic in some cases.
 
-Supported mods and games: all of the most popular ones on paper, but its early alpha, so it can still be broken. It's not just popular ones, actually no idea how many it supports, some of them are not even on ContentDB.
-
-If a mod or a game you like is not supported or there are some problems, tell me, I will see what can be done. You can just drop a list of mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game with meticulous consideration, but we are not at that stage yet.
+You can also build these lights just like you do with any structures, in other words, place invisible blocks of light of all possible engine light levels block-by-block. Tools are coming soon to make this process more user-friendly, right now you will need to make them visible and interactable in debug mode.
 
 **WARNING:**
 
@@ -24,9 +22,13 @@ If a mod or a game you like is not supported or there are some problems, tell me
 
 **6. auto rebuild lights is disabled for now, so you will have to run ```/rebuildlights``` command if you have more than one light sources close to each other and you removed one of them.**
 
-Voxel light maps are a complete game changer - it is almost like going from 2d to 3d in terms of depth. You now have 14 shades for every visible building block, and it does not have to register 14 versions of every building block. Cobble only challenge has got a whole lot easier, something fun to look at with the least fun texture is possible now with just this mod :> Disabling smooth lighting might can make for an interesting aesthetic in some cases.
+*For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
-You can also build these lights just like you do with any structures, in other words, place invisible blocks of light of all possible engine light levels block-by-block. Tools are coming soon to make this process more user-friendly, right now you will need to make them visible and interactable in debug mode.
+## Supported mods and games
+
+Most of the most popular ones on paper, but its early alpha, so it can still be broken. It's not just popular ones, actually no idea how many it supports, some of them are not even on ContentDB.
+
+If a mod or a game you like is not supported or there are some problems, tell me, I will see what can be done. You can just drop a list of mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game with meticulous consideration, but we are not at that stage yet.
 
 ## Light Brush
 
@@ -70,11 +72,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 # todo
 
+- add literally all mods and games with light_source def to optional depends
+
 - add inventory images for lights and debug lights, make them only available in creative
 
 - make floodable light sources not work in water just like in original wielded light
-
-- add command to increase/decrease brightness of every light node in an area, at least if limited for now
 
 - readd on_generated
 
@@ -127,6 +129,8 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - add global step override api, ability to implement cozylights global step into a game/other mod global step more efficiently, maybe add generic global step call like mainloop or mainstep, see what other games do with it, choose or create convention for this i guess
 
 - add handle_async where it makes sense
+
+- ci for optional_depends auto update according to content db mods/games updates and releases
 
 LICENSE
 
