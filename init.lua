@@ -28,20 +28,26 @@ cozylights = {
 			reach_factor = 2,
 			dim_factor = -3
 		},
-		-- "torchlike" torches, fires, flames. made much dimmer than what default engine lights makes them
+		-- "candlelike" something-something
 		[3] = {
+			brightness = 0,
+			reach_factor = 2,
+			dim_factor = -3
+		},
+		-- "torchlike" torches, fires, flames. made much dimmer than what default engine lights makes them
+		[4] = {
 			brightness = -2,
 			reach_factor = 0,
 			dim_factor = 0
 		},
 		-- "lamplike" a bright source, think mese lamp(actually turned out its like a projector, and below is even bigger projector)
-		[4] = {
+		[5] = {
 			brightness = 0,
 			reach_factor = 3,
 			dim_factor = 4
 		},
 		-- "projectorlike" a bright source with massive reach
-		[5] = {
+		[6] = {
 			brightness = 1,
 			reach_factor = 3,
 			dim_factor = 4
@@ -96,12 +102,16 @@ minetest.register_on_mods_loaded(function()
 	local cozy_items = {}
 	local cozycids_sunlight_propagates = {}
 	local cozycids_light_sources = {}
+	local cozytest = {}
 	local override = cozylights.override_engine_light_sources
 	for _,def in pairs(minetest.registered_items) do
-		if def.light_source and def.light_source > 0 then
+		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" then
 			local mods = nil
 			if def.drawtype == "plantlike" then
 				mods = 1
+			end
+			if def.drawtype == "airlike" then
+				cozytest[#cozytest+1] = def.name
 			end
 			if string.find(def.name,"torch") then
 				mods = 3
@@ -117,7 +127,7 @@ minetest.register_on_mods_loaded(function()
 			local cid = minetest.get_content_id(def.name)
 			cozycids_sunlight_propagates[cid] = true
 		end
-		if def.light_source and def.light_source > 0 then
+		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" then
 			local cid = minetest.get_content_id(def.name)
 			if cid < c_lights[1] or cid > c_lights[14]+14 then
 				cozycids_light_sources[cid] = true
@@ -188,6 +198,7 @@ minetest.register_on_mods_loaded(function()
 	cozylights.cozy_items = cozy_items
 	cozylights.cozycids_sunlight_propagates = cozycids_sunlight_propagates
 	cozylights.cozycids_light_sources = cozycids_light_sources
+	cozylights.cozytest = cozytest
 end)
 
 --clean up possible stale wielded light on join, since on server shutdown we cant execute on_leave

@@ -126,6 +126,7 @@ minetest.after(1, function()
 	cozylights:finalize(cozycids_sunlight_propagates)
 	print(#cozycids_sunlight_propagates)
 	cozylights.cozycids_sunlight_propagates = {}
+	minetest.chat_send_all(cozylights:dump(cozylights.cozytest))
 end)
 
 -- adjusting dirfloor might help with some nodes missing. probably the only acceptable way to to eliminate node

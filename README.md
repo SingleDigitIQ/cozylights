@@ -99,11 +99,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 # todo
 
-- make all chat commands to work with debug lights
+- ignore airlike and liquid light sources by default, since there are often too many of them, until optimization for several adjacent light sources drops. Allow to add exceptions 
 
 - readd light auto rebuild on light source destroy
 
-- ignore airlike and liquid light sources by default, since there are often too many of them, until optimization for several adjacent light sources drops. Allow to add exceptions 
+
 
 - readd on_generated
 
