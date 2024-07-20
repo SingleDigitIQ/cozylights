@@ -218,6 +218,46 @@ local daynightratio = {
 	end,
 }
 
+local cozyadjust = {
+	params = "<size> <adjust_by> <keep_map>",
+	description = "adjust brightness of all light nodes in the area.\n"..
+	"keep_map is 1 by default and can be omitted, when it's 1 and adjust_by will result in a value out of bounds of 1-14(engine light levels) "..
+	"even for one node in the area, the command will revert(have no effect at all), so that light map will be preserved\n"..
+	"if you are ok with breaking light map, type 0 for third value",
+	func = function(name, param)
+		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local size, adjust_by, keep_map = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
+		size = tonumber(size) or cozylights.default_size
+		adjust_by = tonumber(adjust_by) or 1
+		keep_map = tonumber(keep_map) or 1
+		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..dump(pos))
+		if size >= 121 then
+			return false, "Radius is too big"
+		end
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
+		for i in a:iterp(minp, maxp) do
+			local cid = data[i]
+			if cid >= c_light1 and cid <= c_light14 then
+				local precid = cid + adjust_by
+				if precid >= c_light1 and precid <= c_light14 then
+					data[i] = precid
+					param2data[i] = precid
+				elseif keep_map == 1 then
+					return true, "Aborted to preserve light map."
+				elseif precid > c_light14 then
+					data[i] = c_light14
+					param2data[i] = c_light14
+				else
+					data[i] = c_air
+					param2data[i] = 0
+				end
+			end
+		end
+		cozylights:setVoxelManipData(vm,data,param2data,true)
+		return true, "Done."
+	end,
+}
+
 local fixtorches = {
 	params = "<size>",
 	description = "fixes old schematic torches alignment to walls and what not",
@@ -292,6 +332,12 @@ minetest.register_chatcommand("zs", cozysettings)
 
 minetest.register_chatcommand("daynightratio", daynightratio)
 minetest.register_chatcommand("zdnr", daynightratio)
+
+minetest.register_chatcommand("fixtorches", fixtorches)
+minetest.register_chatcommand("zft", fixtorches)
+
+minetest.register_chatcommand("cozyadjust", cozyadjust)
+minetest.register_chatcommand("za", cozyadjust)
 
 minetest.register_chatcommand("fixtorches", fixtorches)
 minetest.register_chatcommand("zft", fixtorches)

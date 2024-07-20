@@ -78,8 +78,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - make floodable light sources not work in water just like in original wielded light
 
-- add command to increase/decrease brightness of every light node in an area, at least if limited for now
-
 - readd on_generated
 
 - readd light auto rebuild on light source destroy
