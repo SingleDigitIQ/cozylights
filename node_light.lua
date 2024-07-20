@@ -37,7 +37,7 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
 	
-	print("dim_levels: "..dump(dim_levels))
+	print("dim_levels: "..cozylights:dump(dim_levels))
 	print("spreading light over a sphere with radius of "..radius)
 	if vm == nil then
 		_,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos,radius)
@@ -125,7 +125,7 @@ end
 
 function cozylights:rebuild_light(pos, cozy_item,vm,a,data,param2data)
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
-	print("rebuilding light for position "..dump(pos))
+	print("rebuilding light for position "..cozylights:dump(pos))
 	local sphere_surface = cozylights:get_sphere_surface(radius)
 	local ylvl = 1
 	local cid = data[a:index(pos.x,pos.y-1,pos.z)]

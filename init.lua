@@ -47,10 +47,10 @@ cozylights = {
 			dim_factor = 4
 		},
 	},
-	cozycids_sunlight_propagates = {},
 	cozy_nodes = nil,
 	cozy_items = nil,
 	-- dynamic size tables
+	cozycids_sunlight_propagates = {},
 	cozyplayers = {},
 	area_queue = nil,
 }
@@ -70,7 +70,7 @@ dofile(modpath.."/helpers.lua")
 -- however the backrooms idea is not about broken windows theory at all, more about supernatural absence of any life
 -- in a seemingly perfectly functioning infinite manmade mess, or idk i am not mentally masturbating any further, 
 -- some of the internets do that way too often, way too much
-if mod_loaded("br_core") then
+if cozylights:mod_loaded("br_core") then
 	cozylights.brightness = cozylights.brightness - 6
 end
 
@@ -126,7 +126,7 @@ minetest.register_on_mods_loaded(function()
 					minetest.override_item(node,{
 						on_destruct = function(pos)
 							base_on_destruct(pos)
-							print(dump(pos))
+							print(cozylights:dump(pos))
 							print(def.name.." is being destroyed")
 							cozylights:destroy_light(pos, cozy_items[def.name])
 						end,
@@ -134,7 +134,7 @@ minetest.register_on_mods_loaded(function()
 				else
 					minetest.override_item(node,{
 						on_destruct = function(pos)
-							print(dump(pos))
+							print(cozylights:dump(pos))
 							print(def.name.." is being destroyed1")
 							cozylights:destroy_light(pos, cozy_items[def.name])
 						end,

@@ -14,7 +14,7 @@ local clearlights = {
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
-		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -37,7 +37,7 @@ local rebuildlights = {
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
-		minetest.log("action", name .. " uses /rebuildlights "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /rebuildlights "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -48,7 +48,7 @@ local rebuildlights = {
 		for i=1,#posrebuilds, 1 do
 			local p = posrebuilds[i]
 			local node = minetest.get_node(p)
-			print(dump(node))
+			print(cozylights:dump(node))
 			cozylights:draw_node_light(p, cozylights.cozy_items[node.name],vm,a,data,param2data)
 		end
 		cozylights:setVoxelManipData(vm,data,param2data,true)
@@ -62,7 +62,7 @@ local fixedges = {
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
-		minetest.log("action", name .. " uses /fixedges "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /fixedges "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -81,7 +81,7 @@ local cozydebugon = {
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
-		minetest.log("action", name .. " uses /cozydebugon "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /cozydebugon "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -103,7 +103,7 @@ local cozydebugoff = {
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
-		minetest.log("action", name .. " uses /cozydebugoff "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /cozydebugoff "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -125,7 +125,7 @@ local optimizeformobile = {
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
-		minetest.log("action", name .. " uses /optimizeformobile "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /optimizeformobile "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -169,7 +169,7 @@ local spawnlight = {
 	func = function(name, param)
 		local brightness, radius, strength = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
-		minetest.log("action", name .. " uses /optimizeformobile "..brightness.." "..radius.." "..strength.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /optimizeformobile "..brightness.." "..radius.." "..strength.." at position: "..cozylights:dump(pos))
 		brightness = mf(tonumber(brightness) or 0)
 		if brightness < 0 then brightness = 0 end
 		if brightness > 14 then brightness = 14 end
@@ -217,7 +217,7 @@ local daynightratio = {
 		local player = minetest.get_player_by_name(name)
 		local pos = vector.round(player:getpos())
 		local ratio = tonumber(param)
-		minetest.log("action", name .. " uses /daynightratio "..ratio.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /daynightratio "..ratio.." at position: "..cozylights:dump(pos))
 		if ratio > 1.0 then	ratio = 1 end
 		if ratio < 0 then ratio = 0 end
 		player:override_day_night_ratio(ratio)
@@ -237,7 +237,7 @@ local cozyadjust = {
 		size = mf(tonumber(size) or cozylights.default_size)
 		adjust_by = mf(tonumber(adjust_by) or 1)
 		keep_map = mf(tonumber(keep_map) or 1)
-		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
@@ -272,7 +272,7 @@ local fixtorches = {
 		local placer = minetest.get_player_by_name(name)
 		local pos = vector.round(placer:getpos())
 		local size = mf(tonumber(param) or cozylights.default_size)
-		minetest.log("action", name .. " uses /fixtorches "..size.." at position: "..dump(pos))
+		minetest.log("action", name .. " uses /fixtorches "..size.." at position: "..cozylights:dump(pos))
 		if size >= 121 then
 			return false, "Radius is too big"
 		end

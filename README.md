@@ -8,6 +8,8 @@ Voxel light maps are a complete game changer - it is almost like going from 2d t
 
 You can also build these lights just like you do with any structures, in other words, place invisible blocks of light of all possible engine light levels block-by-block. Tools are coming soon to make this process more user-friendly, right now you will need to make them visible and interactable in debug mode.
 
+It is eventually supposed to become accurate enough so that if you learn how to draw, you will have an easier time understanding how depth and shadows work and what can be done with them.
+
 **WARNING:**
 
 **1. after removing Cozy Lights from your world you will be left with spheres of unknown nodes. Easiest could be to reenable the mod and call ```/clearlights``` in all locations Cozy Lights are active.**
@@ -34,7 +36,7 @@ If a mod or a game you like is not supported or there are some problems, tell me
 
 *Click or hold left mouse button* to draw light with given settings. Light Brush' reach is 100 nodes, so you can have perspective. Note: with radiuses over 30 nodes as of now mouse hold won't have an effect.
 
-*On right click* settings menu opens up. The menu has hopefully useful tooltips for each setting. You can set radius, brightness, strength and draw mode. There are 5 draw modes so far: default, blend, override, lighten and darken.
+*On right click* settings menu opens up. The menu has hopefully useful tooltips for each setting. You can set radius, brightness, strength and draw mode. There are 6 draw modes so far: default, erase, override, lighten, darken and blend.
 
 ## Chat Commands
 
@@ -58,21 +60,30 @@ Currently max radius is 120 for these commands, and for some it's less than that
 
 ```/daynightratio <ratio float>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
 
-```/cozyadjust <size number> <adjust_by number> <keep_map number>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
+```/cozyadjust <size number> <adjust_by number> <keep_map number>``` change brightness of all cozy light nodes by adjust_by value in the area of size. Adjust_by can be negative. Keep_map is 1 by default and can be omitted, when it's 1 and adjust_by will result in a value out of bounds of 1-14(engine light levels) even for one node in the area, the command will revert(have no effect at all), so that light map will be preserved. If you are ok with breaking light map, type 0 for keep_map.
 
 
 Shortcuts for all commands follow a convention to easier memorize them:
-```zcl``` - clearlights
-```zrl``` - rebuildlights
-```zfe``` - fixedges
-```zdon``` - cozydebugon
-```zdoff``` - cozydebugoff
-```zofm``` - optimizeformobile
-```zsl``` - spawnlight
-```zs``` - cozysettings
-```zdnr``` - daynightratio
-```za``` - cozyadjust
 
+```zcl``` - clearlights
+
+```zrl``` - rebuildlights
+
+```zfe``` - fixedges
+
+```zdon``` - cozydebugon
+
+```zdoff``` - cozydebugoff
+
+```zofm``` - optimizeformobile
+
+```zsl``` - spawnlight
+
+```zs``` - cozysettings
+
+```zdnr``` - daynightratio
+
+```za``` - cozyadjust
 
 ## For Developers
 
@@ -80,13 +91,27 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 *Plans for API:*
 
-- You will be able to override cozylights' global step, disable it and call it from your global step. Wait, however technically you can do this
+- You will be able to override cozylights' global step, disable it and call it from your global step
 
-- You will be able to override any defaults
+- You will be able to override any default settings
 
 - Register unique settings for specific nodes
 
 # todo
+
+- make all chat commands to work with debug lights
+
+- decrease amount of overriden globals
+
+- readd light auto rebuild on light source destroy
+
+- ignore airlike and liquid light sources by default, since there are often too many of them, until optimization for several adjacent light sources drops. Allow to add exceptions 
+
+- readd on_generated
+
+- stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
+
+- see what can be done about dynamic light sources if it will be needed at all after light auto rebuild. dynamic means their brightness is not constant or maybe they disappear/reappear
 
 - add literally all mods and games with light_source def to optional depends
 
@@ -94,17 +119,17 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - make floodable light sources not work in water just like in original wielded light
 
-- readd on_generated
-
-- readd light auto rebuild on light source destroy
-
-- see what can be done about dynamic light sources if it will be needed at all after light auto rebuild. dynamic means their brightness is not constant or maybe they disappear/reappear
-
 - make darkness nodes, wielded darkness, Darkness Brush
 
 - add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
 
 - raytracing
+
+- allow people to run cpu and memory-friendly minimal schematic support version, for multiplayer servers for example
+
+- if certain treshold of light source commonality in an area is reached, those light sources should be ignored
+
+- would it be possible without too much work to programatically determine global commonality of a node from mapgen? example: all water was made to be a light_source of 1 by a game/mod
 
 - add undo
 
