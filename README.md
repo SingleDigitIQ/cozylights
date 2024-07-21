@@ -99,11 +99,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 # todo
 
-- ignore airlike and liquid light sources by default, since there are often too many of them, until optimization for several adjacent light sources drops. Allow to add exceptions 
-
 - readd light auto rebuild on light source destroy
-
-
 
 - readd on_generated
 
@@ -111,11 +107,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - see what can be done about dynamic light sources if it will be needed at all after light auto rebuild. dynamic means their brightness is not constant or maybe they disappear/reappear
 
+- illuminate transparent liquids too, except dont make floodable light sources work underwater just like in original wielded light
+
 - add literally all mods and games with light_source def to optional depends
 
 - add inventory images for lights and debug lights, make them only available in creative
-
-- make floodable light sources not work in water just like in original wielded light
 
 - make darkness nodes, wielded darkness, Darkness Brush
 

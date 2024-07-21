@@ -34,12 +34,12 @@ local clearlights = {
 
 local rebuildlights = {
 	params = "<size>",
-	description = "force rebuilds lights in the area",
+	description = "force rebuilds lights in the area. max radius is 96 for now",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /rebuildlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size >= 96 then
 			return false, "Radius is too big"
 		end
 		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.cozy_nodes)

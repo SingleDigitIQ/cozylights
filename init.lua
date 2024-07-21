@@ -107,15 +107,15 @@ minetest.register_on_mods_loaded(function()
 	for _,def in pairs(minetest.registered_items) do
 		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
 			local mods = nil
-			if def.drawtype == "plantlike" then
-				mods = 1
-			end
+			--if def.drawtype == "plantlike" then
+			--	mods = 1
+			--end
 			if def.drawtype == "airlike" then
 				cozytest[#cozytest+1] = def.name
 			end
-			if string.find(def.name,"torch") then
-				mods = 3
-			end
+			--if string.find(def.name,"torch") then
+			--	mods = 3
+			--end
 			cozy_items[def.name] = {light_source= def.light_source or 0,floodable=def.floodable or false,modifiers=mods}
 			if not string.find(def.name, "cozylights:light") then
 				cozy_nodes[#cozy_nodes+1] = def.name
@@ -137,7 +137,7 @@ minetest.register_on_mods_loaded(function()
 						on_destruct = function(pos)
 							base_on_destruct(pos)
 							print(cozylights:dump(pos))
-							print(def.name.." is being destroyed")
+							print(def.name.." is destroyed")
 							cozylights:destroy_light(pos, cozy_items[def.name])
 						end,
 					})
@@ -145,7 +145,7 @@ minetest.register_on_mods_loaded(function()
 					minetest.override_item(node,{
 						on_destruct = function(pos)
 							print(cozylights:dump(pos))
-							print(def.name.." is being destroyed1")
+							print(def.name.." is destroyed1")
 							cozylights:destroy_light(pos, cozy_items[def.name])
 						end,
 					})
