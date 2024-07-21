@@ -10,19 +10,15 @@ You can also build these lights just like you do with any structures, in other w
 
 It is eventually supposed to become accurate enough so that if you learn how to draw, you will have an easier time understanding how depth and shadows work and what can be done with them.
 
+Wielded cozy light is by default disabled for now, you can enable it in Minetest main menu Settings -> Mods -> Cozy Lights
+
 **WARNING:**
 
 **1. after removing Cozy Lights from your world you will be left with spheres of unknown nodes. Easiest could be to reenable the mod and call ```/clearlights``` in all locations Cozy Lights are active.**
 
 **2. if you have override_engine_light_sources enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_light_sources is disabled by default, so it should be safe.**
 
-**3. if a light source in a game/mod is not static, sometimes disappears like a firefly or changes the brightness according to some event or over time, light map in that area will probably look weird.**
-
-**4. on_generated callback is disabled, so if you want a scene with cozy lights in caverealms or everness, you will have to run ```/rebuildlights``` in an area**
-
-**5. wielded cozy light is by default disabled, you can enable it in settings. However, other wielded light mods might cause issues easily in that case as of now. You can enable wielded cozy light in main menu Settings -> Mods -> Cozy Lights**
-
-**6. auto rebuild lights is disabled for now, so you will have to run ```/rebuildlights``` command if you have more than one light sources close to each other and you removed one of them.**
+**3. on_generated callback is disabled, so if you want a scene with cozy lights in caverealms or everness, you will have to run ```/rebuildlights``` in an area**
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
