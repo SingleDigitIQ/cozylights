@@ -95,6 +95,8 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 # todo
 
+- fix a bug that creates light around an attempt of placing a node, instead of actually placed node
+
 - limit wielded_light radius and enable it by default, instead of enable/disable setting, use setting of max radius for wielded light, if -1 - then its disabled
 
 - readd on_generated
