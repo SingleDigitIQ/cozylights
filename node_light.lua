@@ -78,6 +78,18 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 
+local light_rebuild_queue = {}
+
+function cozylights:rebuild_first()
+	if #light_rebuild_queue == 0 then
+		return
+	else
+		minetest.chat_send_all(#light_rebuild_queue)
+	end
+	cozylights:draw_node_light(light_rebuild_queue[1].pos, light_rebuild_queue[1].cozy_item)
+	table.remove(light_rebuild_queue, 1)
+end
+
 function cozylights:destroy_light(pos, cozy_item)
 	local t = os.clock()
 	local radius = cozylights:calc_dims(cozy_item)
@@ -101,20 +113,26 @@ function cozylights:destroy_light(pos, cozy_item)
 		darknesscast(pos, vector.direction(pos, end_pos),radius,data,param2data, a)
 	end
 
-	--[[local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, 40), vector.add(pos, 40), cozylights.cozy_nodes)
+	local rebuild_range = 70--radius*2 < 100 and radius*2 or 99 
+	local posrebuilds = minetest.find_nodes_in_area(
+		vector.subtract(pos, rebuild_range),
+		vector.add(pos, rebuild_range),
+		cozylights.cozy_nodes
+	)
 	local pos_hash = pos.x + (pos.y-ylvl)*100 + pos.z*10000
 	for i=1,#posrebuilds do
 		local posrebuild_hash = posrebuilds[i].x + (posrebuilds[i].y)*100 + posrebuilds[i].z*10000
 		if posrebuild_hash ~= pos_hash then
 			local node = minetest.get_node(posrebuilds[i])
-			local max_distance = cozylights.cozy_items[node.name].light_source*cozylights.reach_factor + radius
+			local rebuild_radius, _ = cozylights:calc_dims(cozy_item)
+			local max_distance = rebuild_radius + radius
 			if max_distance > vector.distance(pos,posrebuilds[i]) then
 				-- handle_async?
-				cozylights:draw_node_light(posrebuilds[i], cozylights.cozy_items[node.name])
+				light_rebuild_queue[#light_rebuild_queue+1] = {pos=posrebuilds[i],cozy_item=cozylights.cozy_items[node.name]}
 				--cozylights:rebuild_light(posrebuilds[i], cozylights.cozy_items[node.name],vm,a,data,param2data)
 			end
 		end
-	end]]
+	end
 
 	cozylights:setVoxelManipData(vm,data,param2data)
 	
