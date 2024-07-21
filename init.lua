@@ -28,29 +28,35 @@ cozylights = {
 			reach_factor = 2,
 			dim_factor = -3
 		},
-		-- "torchlike" torches, fires, flames. made much dimmer than what default engine lights makes them
+		-- "candlelike" something-something
 		[3] = {
+			brightness = 0,
+			reach_factor = 2,
+			dim_factor = -3
+		},
+		-- "torchlike" torches, fires, flames. made much dimmer than what default engine lights makes them
+		[4] = {
 			brightness = -2,
 			reach_factor = 0,
 			dim_factor = 0
 		},
 		-- "lamplike" a bright source, think mese lamp(actually turned out its like a projector, and below is even bigger projector)
-		[4] = {
+		[5] = {
 			brightness = 0,
 			reach_factor = 3,
 			dim_factor = 4
 		},
 		-- "projectorlike" a bright source with massive reach
-		[5] = {
+		[6] = {
 			brightness = 1,
 			reach_factor = 3,
 			dim_factor = 4
 		},
 	},
-	cozycids_sunlight_propagates = {},
 	cozy_nodes = nil,
 	cozy_items = nil,
 	-- dynamic size tables
+	cozycids_sunlight_propagates = {},
 	cozyplayers = {},
 	area_queue = nil,
 }
@@ -70,7 +76,7 @@ dofile(modpath.."/helpers.lua")
 -- however the backrooms idea is not about broken windows theory at all, more about supernatural absence of any life
 -- in a seemingly perfectly functioning infinite manmade mess, or idk i am not mentally masturbating any further, 
 -- some of the internets do that way too often, way too much
-if mod_loaded("br_core") then
+if cozylights:mod_loaded("br_core") then
 	cozylights.brightness = cozylights.brightness - 6
 end
 
@@ -96,19 +102,28 @@ minetest.register_on_mods_loaded(function()
 	local cozy_items = {}
 	local cozycids_sunlight_propagates = {}
 	local cozycids_light_sources = {}
+	local cozytest = {}
 	local override = cozylights.override_engine_light_sources
 	for _,def in pairs(minetest.registered_items) do
-		if def.light_source and def.light_source > 0 then
-			local mods = nil
-			if def.drawtype == "plantlike" then
-				mods = 1
+		if def.light_source and def.light_source > 0
+		and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
+			-- here we are going to define more specific skips and options for sus light sources
+			local skip = false
+			if string.find(def.name, "everness:") ~= false and def.groups.vine ~= nil then
+				skip = true -- like goto :continue:
 			end
-			if string.find(def.name,"torch") then
-				mods = 3
-			end
-			cozy_items[def.name] = {light_source= def.light_source or 0,floodable=def.floodable or false,modifiers=mods}
-			if not string.find(def.name, "cozylights:light") then
-				cozy_nodes[#cozy_nodes+1] = def.name
+			if skip == false then
+				local mods = nil
+				--if def.drawtype == "plantlike" then
+				--	mods = 1
+				--end
+				--if string.find(def.name,"torch") then
+				--	mods = 3
+				--end
+				cozy_items[def.name] = {light_source= def.light_source or 0,floodable=def.floodable or false,modifiers=mods}
+				if not string.find(def.name, "cozylights:light") then
+					cozy_nodes[#cozy_nodes+1] = def.name
+				end
 			end
 		end
 	end
@@ -117,69 +132,75 @@ minetest.register_on_mods_loaded(function()
 			local cid = minetest.get_content_id(def.name)
 			cozycids_sunlight_propagates[cid] = true
 		end
-		if def.light_source and def.light_source > 0 then
+		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
 			local cid = minetest.get_content_id(def.name)
 			if cid < c_lights[1] or cid > c_lights[14]+14 then
-				cozycids_light_sources[cid] = true
-				if def.on_destruct then
-					local base_on_destruct = def.on_destruct
-					minetest.override_item(node,{
-						on_destruct = function(pos)
-							base_on_destruct(pos)
-							print(dump(pos))
-							print(def.name.." is being destroyed")
-							cozylights:destroy_light(pos, cozy_items[def.name])
-						end,
-					})
-				else
-					minetest.override_item(node,{
-						on_destruct = function(pos)
-							print(dump(pos))
-							print(def.name.." is being destroyed1")
-							cozylights:destroy_light(pos, cozy_items[def.name])
-						end,
-					})
+				local skip = false
+				if string.find(def.name, "everness:") ~= false and def.groups.vine ~= nil then
+					skip = true -- like goto :continue:
 				end
-				if def.on_place ~= nil then
-					local base_on_place = def.on_place
-					local light = override == true and 1 or def.light_source
-					if def.name == "br_core:ceiling_light_1" then
-						light = def.light_source - 7
+				if skip == false then
+					cozycids_light_sources[cid] = true
+					if def.on_destruct then
+						local base_on_destruct = def.on_destruct
+						minetest.override_item(node,{
+							on_destruct = function(pos)
+								base_on_destruct(pos)
+								print(cozylights:dump(pos))
+								print(def.name.." is destroyed")
+								cozylights:destroy_light(pos, cozy_items[def.name])
+							end,
+						})
+					else
+						minetest.override_item(node,{
+							on_destruct = function(pos)
+								print(cozylights:dump(pos))
+								print(def.name.." is destroyed1")
+								cozylights:destroy_light(pos, cozy_items[def.name])
+							end,
+						})
 					end
-					minetest.override_item(node,{
-						light_source = light,
-						use_texture_alpha= def.use_texture_alpha or "clip",
-						on_place = function(cozy_itemstack, placer, pointed_thing)
-							local nodenameunder = minetest.get_node(pointed_thing.under).name
-							local nodedefunder = minetest.registered_nodes[nodenameunder]
-							base_on_place(cozy_itemstack, placer, pointed_thing)
-							if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
-								pointed_thing.above.y = pointed_thing.above.y - 1
-								cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
-							else
-								cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
-							end
-						end,
-					})
-				else
-					local light = override == true and 1 or def.light_source
-					if def.name == "br_core:ceiling_light_1" then
-						light = def.light_source - 7
+					if def.on_place ~= nil then
+						local base_on_place = def.on_place
+						local light = override == true and 1 or def.light_source
+						if def.name == "br_core:ceiling_light_1" then
+							light = def.light_source - 7
+						end
+						minetest.override_item(node,{
+							light_source = light,
+							use_texture_alpha= def.use_texture_alpha or "clip",
+							on_place = function(cozy_itemstack, placer, pointed_thing)
+								local nodenameunder = minetest.get_node(pointed_thing.under).name
+								local nodedefunder = minetest.registered_nodes[nodenameunder]
+								base_on_place(cozy_itemstack, placer, pointed_thing)
+								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
+									pointed_thing.above.y = pointed_thing.above.y - 1
+									cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
+								else
+									cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
+								end
+							end,
+						})
+					else
+						local light = override == true and 1 or def.light_source
+						if def.name == "br_core:ceiling_light_1" then
+							light = def.light_source - 7
+						end
+						minetest.override_item(node,{
+							light_source = light,
+							use_texture_alpha= def.use_texture_alpha or "clip",
+							on_place = function(cozy_itemstack, placer, pointed_thing)
+								local nodenameunder = minetest.get_node(pointed_thing.under).name
+								local nodedefunder = minetest.registered_nodes[nodenameunder]
+								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
+									pointed_thing.above.y = pointed_thing.above.y - 1
+									cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
+								else
+									cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
+								end	
+							end,
+						})
 					end
-					minetest.override_item(node,{
-						light_source = light,
-						use_texture_alpha= def.use_texture_alpha or "clip",
-						on_place = function(cozy_itemstack, placer, pointed_thing)
-							local nodenameunder = minetest.get_node(pointed_thing.under).name
-							local nodedefunder = minetest.registered_nodes[nodenameunder]
-							if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
-								pointed_thing.above.y = pointed_thing.above.y - 1
-								cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
-							else
-								cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
-							end	
-						end,
-					})
 				end
 			end
 		end
@@ -188,6 +209,7 @@ minetest.register_on_mods_loaded(function()
 	cozylights.cozy_items = cozy_items
 	cozylights.cozycids_sunlight_propagates = cozycids_sunlight_propagates
 	cozylights.cozycids_light_sources = cozycids_light_sources
+	cozylights.cozytest = cozytest
 end)
 
 --clean up possible stale wielded light on join, since on server shutdown we cant execute on_leave
@@ -271,6 +293,7 @@ minetest.register_globalstep(function(dtime)
 	if total_dtime > step_time then
 		total_dtime = 0
 		local t = os.clock()
+		cozylights:rebuild_first()
 		for _,cozyplayer in pairs(cozylights.cozyplayers) do
 			local player = minetest.get_player_by_name(cozyplayer.name)
 			local pos = vector.round(player:getpos())

@@ -82,8 +82,8 @@ local function reconstruct_sphere(radius)
 	
 	print("#sphere: "..sphere_len)
 	print("#reconstructed_sphere: "..reconstructed_sphere_len)
-	--print(dump(sphere))
-	--print(dump(reconstructed_sphere))
+	--print(cozylights:dump(sphere))
+	--print(cozylights:dump(reconstructed_sphere))
 end
 
 for i=1,1 do

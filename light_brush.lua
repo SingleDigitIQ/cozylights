@@ -127,6 +127,7 @@ local function calc_dims_for_brush(brightness, radius, strength, even)
 	strength = strength*5
 	dim_levels[1] = brightness
 	if even ~= true then
+		
 		for i = 2, radius do
 			local dim = math.sqrt(math.sqrt(i)) * (6-strength)
 			local light_i = mf(brightness - dim)
@@ -221,7 +222,7 @@ function cozylights:draw_brush_light(pos, lb)
 	local mode = lb.mode
 	local brightness = lb.brightness
 	local dim_levels = calc_dims_for_brush(brightness,radius,lb.strength, mode==2 and true or false)
-	print("dim_levels:"..dump(dim_levels))
+	print("dim_levels:"..cozylights:dump(dim_levels))
 	local vm  = minetest.get_voxel_manip()
 	local emin, emax = vm:read_from_map(vector.subtract(pos, radius+1), vector.add(pos, radius+1))
 	local data = vm:get_data()

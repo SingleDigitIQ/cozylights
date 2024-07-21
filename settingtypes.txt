@@ -13,7 +13,7 @@ cozylights_reach_factor (Global ambient light source reach factor) float 4.0 0.0
 cozylights_dim_factor (Global ambient light source dim factor) float 9.0 0.0 10.0
 
 #	whether cozy wielded light is enabled, can be too expensive for mobiles and potatos, especially in heavily modded worlds
-cozylights_wielded_light (Enable cozy wielded light) bool true
+cozylights_wielded_light (Enable cozy wielded light) bool false
 
 #	sets all light sources to 1 so that the engine will not render anticlimactic squares for torches
 #	and such. if a player removes cozylights from a world while this is set to true, fixmap mod for existing lights will be required, therefore default is set
