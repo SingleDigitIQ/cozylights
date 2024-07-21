@@ -95,13 +95,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 # todo
 
-- readd light auto rebuild on light source destroy
+- limit wielded_light radius and enable it by default, instead of enable/disable setting, use setting of max radius for wielded light, if -1 - then its disabled
 
 - readd on_generated
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
-
-- see what can be done about dynamic light sources if it will be needed at all after light auto rebuild. dynamic means their brightness is not constant or maybe they disappear/reappear
 
 - illuminate transparent liquids too, except dont make floodable light sources work underwater just like in original wielded light
 
