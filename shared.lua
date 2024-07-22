@@ -20,7 +20,7 @@ function cozylights:getVoxelManipData(pos, size)
 	return minp,maxp,vm,data,param2data,a
 end
 
-function cozylights:setVoxelManipData(vm,data,param2data, update_liquids)
+function cozylights:setVoxelManipData(vm,data,param2data,update_liquids)
 	vm:set_data(data)
 	if param2data ~= nil then
 		vm:set_param2_data(param2data)
@@ -90,7 +90,7 @@ function cozylights:calc_dims(cozy_item)
 	end
 	local max_light = mf(cozy_item.light_source + cozylights.brightness + brightness_mod)
 	local r = mf(max_light*max_light/10*(cozylights.reach_factor+reach_mod))
-	print("initial r: "..r)
+	--print("initial r: "..r)
 	local r_max = 0
 	local dim_levels = {}
 	local dim_factor = cozylights.dim_factor + dim_mod
@@ -126,7 +126,6 @@ minetest.after(1, function()
 	cozylights:finalize(cozycids_sunlight_propagates)
 	print(#cozycids_sunlight_propagates)
 	cozylights.cozycids_sunlight_propagates = {}
-	minetest.chat_send_all(cozylights:dump(cozylights.cozytest))
 end)
 
 -- adjusting dirfloor might help with some nodes missing. probably the only acceptable way to to eliminate node

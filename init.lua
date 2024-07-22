@@ -53,12 +53,14 @@ cozylights = {
 			dim_factor = 4
 		},
 	},
-	cozy_nodes = nil,
+	-- appears nodes and items might not necessarily be the same array
+	source_nodes = nil,
 	cozy_items = nil,
-	-- dynamic size tables
+	-- dynamic size tables, okay now what about functions
 	cozycids_sunlight_propagates = {},
 	cozyplayers = {},
-	area_queue = nil,
+	area_queue = {},
+	light_rebuild_queue = {},
 }
 
 local step_time = 0.1
@@ -98,11 +100,10 @@ local mf = math.floor
 ------------------------------------------
 
 minetest.register_on_mods_loaded(function()
-	local cozy_nodes = {}
+	local source_nodes = {}
 	local cozy_items = {}
 	local cozycids_sunlight_propagates = {}
 	local cozycids_light_sources = {}
-	local cozytest = {}
 	local override = cozylights.override_engine_light_sources
 	for _,def in pairs(minetest.registered_items) do
 		if def.light_source and def.light_source > 0
@@ -122,7 +123,7 @@ minetest.register_on_mods_loaded(function()
 				--end
 				cozy_items[def.name] = {light_source= def.light_source or 0,floodable=def.floodable or false,modifiers=mods}
 				if not string.find(def.name, "cozylights:light") then
-					cozy_nodes[#cozy_nodes+1] = def.name
+					source_nodes[#source_nodes+1] = def.name
 				end
 			end
 		end
@@ -205,11 +206,10 @@ minetest.register_on_mods_loaded(function()
 			end
 		end
 	end
-	cozylights.cozy_nodes = cozy_nodes
+	cozylights.source_nodes = source_nodes
 	cozylights.cozy_items = cozy_items
 	cozylights.cozycids_sunlight_propagates = cozycids_sunlight_propagates
 	cozylights.cozycids_light_sources = cozycids_light_sources
-	cozylights.cozytest = cozytest
 end)
 
 --clean up possible stale wielded light on join, since on server shutdown we cant execute on_leave
@@ -286,14 +286,39 @@ minetest.register_on_shutdown(function()
 	end
 end)
 
+local function build_lights_after_generated(minp,maxp,sources)
+	local vm  = minetest.get_voxel_manip()
+	local emin, emax = vm:read_from_map(vector.subtract(minp, 1), vector.add(maxp, 1))
+	local data = vm:get_data()
+	local param2data = vm:get_param2_data()
+	local a = VoxelArea:new{
+		MinEdge = emin,
+		MaxEdge = emax
+	}
+	for i=1, #sources do
+		cozylights:draw_node_light(sources[i].pos,sources[i].cozy_item,vm,a,data,param2data)
+	end
+	cozylights:setVoxelManipData(vm,data,param2data,true)
+end
+
 local wielded_light_enabled = cozylights.cozy_wielded_light
 
+local light_build_time = 0
 minetest.register_globalstep(function(dtime)
 	total_dtime = total_dtime + dtime
 	if total_dtime > step_time then
 		total_dtime = 0
+		light_build_time = light_build_time + step_time
+		if light_build_time > 0.3 then
+			light_build_time = 0
+			if #cozylights.area_queue ~= 0 then
+				local ar = cozylights.area_queue[1]
+				build_lights_after_generated(ar.minp,ar.maxp,ar.sources)
+				table.remove(cozylights.area_queue, 1)
+			end
+		end
 		local t = os.clock()
-		cozylights:rebuild_first()
+		cozylights:rebuild_light()
 		for _,cozyplayer in pairs(cozylights.cozyplayers) do
 			local player = minetest.get_player_by_name(cozyplayer.name)
 			local pos = vector.round(player:getpos())
@@ -353,28 +378,47 @@ minetest.register_globalstep(function(dtime)
 	end
 end)
 
---[[
+
+
+
 local gent_total = 0
 local gent_count = 0
 minetest.register_on_generated(function(minp, maxp, seed)
-	local needsFix = 0
 	local t = os.clock()
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local a = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	local data = vm:get_data()
-	local param2data = vm:get_data()
+	local sources = {}
 	for i in a:iterp(minp, maxp) do
 		local cid = data[i]
 		if cozylights.cozycids_light_sources[cid] == true then
-			local name = minetest.get_name_from_content_id(cid)d
-			cozylights:draw_node_light(a:position(i), cozylights.cozy_items[name],vm,a,data,param2data)
+			local name = minetest.get_name_from_content_id(cid)
+			local cozy_item = cozylights.cozy_items[name]
+			local pos = a:position(i)
+			local radius, _ = cozylights:calc_dims(cozy_item)
+			if a:containsp(vector.subtract(pos,radius)) and a:containsp(vector.add(pos,radius)) then
+				sources[#sources+1] = {
+					pos=pos,
+					cozy_item=cozy_item
+				}
+			else
+				table.insert(cozylights.light_rebuild_queue, {
+					pos=a:position(i),
+					cozy_item=cozy_item
+				})
+			end
 		end
 	end
-	cozylights:setVoxelManipData(vm,data,param2data,true)
+	--cozylights:setVoxelManipData(vm,data,param2data,true)
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	print("Average mapchunk generation time " .. gent_total/gent_count .. " ms. Sample of: "..gent_count)
-	--if needsFix == 1 then
-	--	cozylights.area_queue[#cozylights.area_queue+1]={minp=minp, maxp=maxp}
-	--end
-end)]]
+	print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	
+	if #sources > 0 then
+		cozylights.area_queue[#cozylights.area_queue+1]={
+			minp=vector.subtract(minp,39),
+			maxp=vector.add(maxp,39),
+			sources=sources
+		}
+	end
+end)
