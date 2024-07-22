@@ -18,7 +18,7 @@ Wielded cozy light is by default disabled for now, you can enable it in Minetest
 
 **2. if you have override_engine_light_sources enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_light_sources is disabled by default, so it should be safe.**
 
-**3. on_generated callback is disabled, so if you want a scene with cozy lights in caverealms or everness, you will have to run ```/rebuildlights``` in an area**
+**3. worldedit:placeholder nodes can prevent light map from working properly, and this currenly happens without notice or options provided.**
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
@@ -99,13 +99,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - limit wielded_light radius and enable it by default, instead of enable/disable setting, use setting of max radius for wielded light, if -1 - then its disabled
 
-- readd on_generated
-
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
 - illuminate transparent liquids too, except dont make floodable light sources work underwater just like in original wielded light
 
-- add literally all mods and games with light_source def to optional depends
+- parse minetest forum for optional_depends
 
 - add inventory images for lights and debug lights, make them only available in creative
 

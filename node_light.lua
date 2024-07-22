@@ -78,16 +78,17 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 
-local light_rebuild_queue = {}
-
-function cozylights:rebuild_first()
+-- handle_async?
+function cozylights:rebuild_light()
+	local light_rebuild_queue = cozylights.light_rebuild_queue
 	if #light_rebuild_queue == 0 then
 		return
-	else
-		minetest.chat_send_all(#light_rebuild_queue)
 	end
-	cozylights:draw_node_light(light_rebuild_queue[1].pos, light_rebuild_queue[1].cozy_item)
+	for i=1,#light_rebuild_queue[1] do
+		cozylights:draw_node_light(light_rebuild_queue[1].pos, light_rebuild_queue[1].cozy_item)
+	end
 	table.remove(light_rebuild_queue, 1)
+
 end
 
 function cozylights:destroy_light(pos, cozy_item)
@@ -113,34 +114,61 @@ function cozylights:destroy_light(pos, cozy_item)
 		darknesscast(pos, vector.direction(pos, end_pos),radius,data,param2data, a)
 	end
 
-	local rebuild_range = 70--radius*2 < 100 and radius*2 or 99 
+	cozylights:setVoxelManipData(vm,data,param2data)
+	
+	local rebuild_range = 75
+	local rebuild_minp = vector.subtract(pos, rebuild_range)
+	local rebuild_maxp = vector.add(pos, rebuild_range)
 	local posrebuilds = minetest.find_nodes_in_area(
-		vector.subtract(pos, rebuild_range),
-		vector.add(pos, rebuild_range),
-		cozylights.cozy_nodes
+		rebuild_minp,
+		rebuild_maxp,
+		cozylights.source_nodes
 	)
 	local pos_hash = pos.x + (pos.y-ylvl)*100 + pos.z*10000
-	for i=1,#posrebuilds do
-		local posrebuild_hash = posrebuilds[i].x + (posrebuilds[i].y)*100 + posrebuilds[i].z*10000
-		if posrebuild_hash ~= pos_hash then
-			local node = minetest.get_node(posrebuilds[i])
-			local rebuild_radius, _ = cozylights:calc_dims(cozy_item)
-			local max_distance = rebuild_radius + radius
-			if max_distance > vector.distance(pos,posrebuilds[i]) then
-				-- handle_async?
-				light_rebuild_queue[#light_rebuild_queue+1] = {pos=posrebuilds[i],cozy_item=cozylights.cozy_items[node.name]}
-				--cozylights:rebuild_light(posrebuilds[i], cozylights.cozy_items[node.name],vm,a,data,param2data)
+	local sources = {}
+	if #posrebuilds > 0 then
+		local light_rebuild_queue = cozylights.light_rebuild_queue
+		for i=1,#posrebuilds do
+			local posrebuild = posrebuilds[i]
+			local posrebuild_hash = posrebuild.x + posrebuild.y*100 + posrebuild.z*10000
+			if posrebuild_hash ~= pos_hash then
+				local node = minetest.get_node(posrebuild)
+				local rebuild_radius, _ = cozylights:calc_dims(cozy_item)
+				local max_distance = rebuild_radius + radius
+				if max_distance > vector.distance(pos,posrebuild) then
+					if vector.in_area(vector.subtract(posrebuild,radius), rebuild_minp, rebuild_maxp)
+						and vector.in_area(vector.add(posrebuild,radius), rebuild_minp, rebuild_maxp)
+					then
+						minetest.chat_send_all(node.name)
+						sources[#sources+1] = {
+							pos=posrebuild,
+							cozy_item=cozylights.cozy_items[node.name]
+						}
+					else
+						cozylights.light_rebuild_queue[#light_rebuild_queue+1] = {
+							pos=posrebuilds[i],
+							cozy_item=cozylights.cozy_items[node.name]
+						}
+					end
+				end
 			end
 		end
 	end
+	if #sources > 0 then
+		cozylights.area_queue[#cozylights.area_queue+1]={
+			minp=rebuild_minp,
+			maxp=rebuild_maxp,
+			sources=sources
+		}
+	end
 
-	cozylights:setVoxelManipData(vm,data,param2data)
-	
 	remt_total = remt_total + mf((os.clock() - t) * 1000)
 	remt_count = remt_count + 1
-	print("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
+	--print
+	minetest.chat_send_all("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
 end
 
+--[[
 function cozylights:rebuild_light(pos, cozy_item,vm,a,data,param2data)
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
 	print("rebuilding light for position "..cozylights:dump(pos))
@@ -164,4 +192,4 @@ function cozylights:rebuild_light(pos, cozy_item,vm,a,data,param2data)
 			cozylights:lightcast(pos, vector.direction(pos, end_pos),radius,data,param2data,a,dim_levels)
 		end
 	end
-end
+end]]

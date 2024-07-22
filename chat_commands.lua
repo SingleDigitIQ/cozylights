@@ -42,7 +42,7 @@ local rebuildlights = {
 		if size >= 96 then
 			return false, "Radius is too big"
 		end
-		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.cozy_nodes)
+		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.source_nodes)
 		print(#posrebuilds)
 
 		local _,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size+25)
@@ -67,7 +67,7 @@ local fixedges = {
 		if size >= 121 then
 			return false, "Radius is too big"
 		end
-		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.cozy_nodes)
+		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.source_nodes)
 		for i=1,#posrebuilds do
 			local node = minetest.get_node(posrebuilds[i])
 			cozylights:draw_node_light(posrebuilds[i], cozylights.cozy_items[node.name])
