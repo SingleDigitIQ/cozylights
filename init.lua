@@ -5,8 +5,8 @@ cozylights = {
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
 	cozy_wielded_light = minetest.settings:get_bool("cozylights_wielded_light", false),
-	override_engine_light_sources = minetest.settings:get_bool("cozylights_override_engine_light_sources", false),
-	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
+	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
+	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", true),
 
 	-- this is a table of modifiers for global light source settings.
 	-- lowkeylike and dimlike usually assigned to decorations in hopes to make all ambient naturally occuring light sources weaker
@@ -60,7 +60,7 @@ cozylights = {
 	cozycids_sunlight_propagates = {},
 	cozyplayers = {},
 	area_queue = {},
-	light_rebuild_queue = {},
+	single_light_queue = {},
 }
 
 local step_time = 0.1
@@ -104,7 +104,7 @@ minetest.register_on_mods_loaded(function()
 	local cozy_items = {}
 	local cozycids_sunlight_propagates = {}
 	local cozycids_light_sources = {}
-	local override = cozylights.override_engine_light_sources
+	local override = cozylights.override_engine_lights
 	for _,def in pairs(minetest.registered_items) do
 		if def.light_source and def.light_source > 0
 		and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
@@ -378,9 +378,6 @@ minetest.register_globalstep(function(dtime)
 	end
 end)
 
-
-
-
 local gent_total = 0
 local gent_count = 0
 minetest.register_on_generated(function(minp, maxp, seed)
@@ -402,7 +399,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 					cozy_item=cozy_item
 				}
 			else
-				table.insert(cozylights.light_rebuild_queue, {
+				table.insert(cozylights.single_light_queue, {
 					pos=a:position(i),
 					cozy_item=cozy_item
 				})

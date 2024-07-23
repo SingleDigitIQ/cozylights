@@ -11,12 +11,12 @@ local mf = math.floor
 
 local clearlights = {
 	params = "<size>",
-	description = "removes cozy and debug light nodes",
+	description = "removes cozy and debug light nodes. max radius is 120 for now",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -34,23 +34,31 @@ local clearlights = {
 
 local rebuildlights = {
 	params = "<size>",
-	description = "force rebuilds lights in the area. max radius is 96 for now",
+	description = "force rebuilds lights in the area. max radius is 120 for now",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /rebuildlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 96 then
-			return false, "Radius is too big"
-		end
-		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.source_nodes)
-		print(#posrebuilds)
-
-		local _,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size+25)
-		for i=1,#posrebuilds, 1 do
-			local p = posrebuilds[i]
-			local node = minetest.get_node(p)
-			print(cozylights:dump(node))
-			cozylights:draw_node_light(p, cozylights.cozy_items[node.name],vm,a,data,param2data)
+		if size > 120 then return false, "Radius is too big" end
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size)
+		for i in a:iterp(minp,maxp) do
+			local node_name = minetest.get_name_from_content_id(data[i])
+			local cozy_item = cozylights.cozy_items[node_name]
+			if cozy_item ~= nil then
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local posrebuild = a:position(i)
+			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
+			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
+				then
+					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data)
+				else
+					local single_light_queue = cozylights.single_light_queue
+					single_light_queue[#single_light_queue+1] = {
+						pos=posrebuild,
+						cozy_item=cozy_item
+					}
+				end
+			end
 		end
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
@@ -59,19 +67,33 @@ local rebuildlights = {
 
 local fixedges = {
 	params = "<size>",
-	description = "fixes edges for all lights in the area",
+	description = "same as rebuild lights but additionally fixes edges for all lights in the area, regardless of always_fix_edges setting. max radius is 120",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /fixedges "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
-			return false, "Radius is too big"
+		if size > 120 then return false, "Radius is too big" end
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size)
+		for i in a:iterp(minp,maxp) do
+			local node_name = minetest.get_name_from_content_id(data[i])
+			local cozy_item = cozylights.cozy_items[node_name]
+			if cozy_item ~= nil then
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local posrebuild = a:position(i)
+			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
+			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
+				then
+					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data, true)
+				else
+					local single_light_queue = cozylights.single_light_queue
+					single_light_queue[#single_light_queue+1] = {
+						pos=posrebuild,
+						cozy_item=cozy_item
+					}
+				end
+			end
 		end
-		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.source_nodes)
-		for i=1,#posrebuilds do
-			local node = minetest.get_node(posrebuilds[i])
-			cozylights:draw_node_light(posrebuilds[i], cozylights.cozy_items[node.name])
-		end
+		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
 }
@@ -83,7 +105,7 @@ local cozydebugon = {
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /cozydebugon "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,_,a = cozylights:getVoxelManipData(pos,size)
@@ -105,7 +127,7 @@ local cozydebugoff = {
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /cozydebugoff "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,_,a = cozylights:getVoxelManipData(pos,size)
@@ -127,7 +149,7 @@ local optimizeformobile = {
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /optimizeformobile "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -239,7 +261,7 @@ local cozyadjust = {
 		adjust_by = mf(tonumber(adjust_by) or 1)
 		keep_map = mf(tonumber(keep_map) or 1)
 		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -289,7 +311,7 @@ local fixtorches = {
 		local pos = vector.round(placer:getpos())
 		local size = mf(tonumber(param) or cozylights.default_size)
 		minetest.log("action", name .. " uses /fixtorches "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)

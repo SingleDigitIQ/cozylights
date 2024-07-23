@@ -18,7 +18,7 @@ cozylights_wielded_light (Enable cozy wielded light) bool false
 #	sets all light sources to 1 so that the engine will not render anticlimactic squares for torches
 #	and such. if a player removes cozylights from a world while this is set to true, fixmap mod for existing lights will be required, therefore default is set
 #	to false, so you will need to enable it yourself after you decide that you like cozylights more. 
-cozylights_override_engine_light_sources (Override engine light sources) bool false
+cozylights_override_engine_lights (Override engine light sources) bool false
 
 #	makes all edges stop lights properly, this setting exists because without this cozylights algo is much faster, so if for example
 #   you need to first place a lot of lights all over the place, it would be easier to first place those lights and then run 

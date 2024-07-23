@@ -149,14 +149,14 @@ function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
-				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
+				local dim = (dim_levels[i] - light_nerf) >= 1 and (dim_levels[i] - light_nerf) or 1
 				local light = c_lights[dim]
 				if light > cid then
 					data[idx] = light
 					param2data[idx] = dim
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -180,7 +180,7 @@ function cozylights:lightcast_erase(pos, dir, radius,data,param2data,a,dim_level
 					param2data[idx] = dim
 				end
 			elseif cid ~= c_air then
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -201,7 +201,7 @@ function cozylights:lightcast_override(pos, dir, radius,data,param2data,a,dim_le
 				data[idx] = c_lights[dim]
 				param2data[idx] = dim
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -226,7 +226,7 @@ function cozylights:lightcast_lighten(pos, dir, radius,data,param2data,a,dim_lev
 					param2data[idx] = dim
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -251,7 +251,7 @@ function cozylights:lightcast_darken(pos, dir, radius,data,param2data,a,dim_leve
 					param2data[idx] = dim
 				end
 			elseif cid ~= c_air then
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -275,7 +275,7 @@ function cozylights:lightcast_blend(pos, dir, radius,data,param2data,a,dim_level
 				data[idx] = c_lights[dim]
 				param2data[idx] = dim
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -292,7 +292,7 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 	local light_nerf = 0
 	local halfrad, braking_brak = radius/2, false
 	local next_x, next_y, next_z = mf(dx+dirfloor) + px, mf(dy+dirfloor) + py, mf(dz+dirfloor) + pz
-	for i = 1, radius do
+	for i = 1, radius,2 do
 		local x,y,z = next_x, next_y, next_z
 		local idx = a:index(x,y,z)
 		for n = 1, 6 do
@@ -326,12 +326,22 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 					end
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
 		end
 		next_x,next_y,next_z = mf(dx*(i+1)+dirfloor)+px, mf(dy*(i+1)+dirfloor)+py, mf(dz*(i+1)+dirfloor)+pz
+		
+		--local next_idx = a:index(next_x,next_y,next_z)
+		--for n = 1, 6 do
+		--	if cozycids_sunlight_propagates[data[next_idx+dirs[n]]] == nil then
+		--		braking_brak = true
+		--		break
+		--	end
+		--end
+		--next_x,next_y,next_z = mf(dx*(i+2)+dirfloor)+px, mf(dy*(i+2)+dirfloor)+py, mf(dz*(i+2)+dirfloor)+pz
+		
 		--local next_adj_indxs = {
 		--	a:index(next_x,y,z),
 		--	a:index(x,y,next_z),
@@ -390,7 +400,7 @@ function cozylights:lightcast_erase_fix_edges(pos, dir, radius,data,param2data,a
 					end
 				end
 			elseif cid ~= c_air then
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -435,7 +445,7 @@ function cozylights:lightcast_override_fix_edges(pos, dir, radius,data,param2dat
 					param2data[idx] = dim
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -489,7 +499,7 @@ function cozylights:lightcast_lighten_fix_edges(pos, dir, radius,data,param2data
 					end
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -543,7 +553,7 @@ function cozylights:lightcast_darken_fix_edges(pos, dir, radius,data,param2data,
 					end
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
@@ -595,7 +605,7 @@ function cozylights:lightcast_blend_fix_edges(pos, dir, radius,data,param2data,a
 					param2data[idx] = dim
 				end
 			else
-				light_nerf = 1
+				light_nerf = light_nerf + 1
 			end
 		else
 			break
