@@ -126,14 +126,18 @@ minetest.after(1, function()
 	cozylights:finalize(cozycids_sunlight_propagates)
 	print(#cozycids_sunlight_propagates)
 	cozylights.cozycids_sunlight_propagates = {}
-	minetest.chat_send_all(">.< Running Cozy Lights 0.2.4 alpha. Some features are still missing or might not work properly and might be fixed tomorrow or next week."..
-	"\n>.< If you experience problems, appreciate if you report them to me(SingleDigitIq) on Minetest forum, Github or Discord."..
-	"\n>.< If you need more of original ideas and blazingly fast code in open source - leave a positive review on ContentDB."..
-	"\n>.< After some people added Cozy Lights to favorites it really seemed to boost rating too, so you can also add it to favorites :>"..
-	"\n>.< This startup message will be removed after beta-test is over."..
-	"\n>.< To open mod settings type in chat /cozysettings or /zs, hopefully tooltips are useful."..
-	"\n>.< Have fun :>"
-	)
+	local last_version_welcome = minetest.settings:get("last_version_welcome")
+	if last_version_welcome ~= cozylights.version then
+		minetest.settings:set("last_version_welcome",cozylights.version)
+		minetest.chat_send_all(">.< Running Cozy Lights "..cozylights.version.." alpha. Some features are still missing or might not work properly and might be fixed tomorrow or next week."..
+		"\n>.< To learn more about what it can do check ContentDB page: https://content.minetest.net/packages/SingleDigitIQ/cozylights/"..
+		"\n>.< If you experience problems, appreciate if you report them on ContentDB, Minetest forum, Github or Discord."..
+		"\n>.< If you need more of original ideas and blazingly fast code in open source - leave a positive review on ContentDB or/and add to favorites."..
+		"\n>.< To open mod settings type in chat /cozysettings or /zs, hopefully tooltips are useful."..
+		"\n>.< This message displays only once per new downloaded update for Cozy Lights mod."..
+		"\n>.< Have fun :>"
+		)
+	end
 end)
 
 -- adjusting dirfloor might help with some nodes missing. probably the only acceptable way to to eliminate node
