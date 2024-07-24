@@ -36,7 +36,7 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data,fix_edges
 	local t = os.clock()
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
-	
+	print("cozy_item:"..cozylights:dump(cozy_item))
 	print("dim_levels: "..cozylights:dump(dim_levels))
 	print("spreading light over a sphere with radius of "..radius)
 	if vm == nil then

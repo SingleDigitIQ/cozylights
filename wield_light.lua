@@ -114,6 +114,7 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	local t = os.clock()
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
+	print("wielded dim_levels: "..cozylights:dump(dim_levels))
 	radius = radius > max_wield_light_radius and max_wield_light_radius or radius
 	if radius == 0 then
 		destroy_stale_wielded_light(data,param2data,a,cozyplayer)
