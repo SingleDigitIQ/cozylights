@@ -52,7 +52,7 @@ Currently max radius is 120 for these commands, and for some it's less than that
 
 ```/spawnlight <brightness float> <reach_factor float> <dim_factor float>``` spawn a light at your position which does not use user friendly light brush algo, but ambient light algo. "float" means it can be with some arbitrary amount of decimals, or simple integer
 
-```/cozysettings <brightness float or ~> <reach_factor float or ~> <dim_factor float or ~>``` change global settings for node light sources like torches, meselamps, fireflies, etc. Put ```~``` instead of a float and previous setting for that value will remain unchanged. This change persists after exiting and re-entering the world again.
+```/cozysettings``` opens a global settings menu for cozy lights, here you can adjust node light sources like torches, meselamps, fireflies, etc to make it work better with potato or make light reach mad far and stuff. Some settings which you can find in Minetest game settings for the mod are still not present here(like override_engine_lights which makes everything nicer). These changes persist after exiting and re-entering the world again.
 
 ```/daynightratio <ratio float>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
 
@@ -95,11 +95,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- add a disclaimer on every load that this is alpha/beta and something might not work correctly
-
 - fix a bug that creates light around an attempt of placing a node, instead of actually placed node
-
-- limit wielded_light radius and enable it by default, instead of enable/disable setting, use setting of max radius for wielded light, if -1 - then its disabled
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 

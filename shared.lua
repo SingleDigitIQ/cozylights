@@ -88,7 +88,7 @@ function cozylights:calc_dims(cozy_item)
 		reach_mod = cozylights.coziest_table[cozy_item.modifiers].reach_factor
 		dim_mod = cozylights.coziest_table[cozy_item.modifiers].dim_factor
 	end
-	local max_light = mf(cozy_item.light_source + cozylights.brightness + brightness_mod)
+	local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod)
 	local r = mf(max_light*max_light/10*(cozylights.reach_factor+reach_mod))
 	--print("initial r: "..r)
 	local r_max = 0
@@ -109,7 +109,7 @@ function cozylights:calc_dims(cozy_item)
 
 	end
 	-- we cut the r only if max_r found is lower than r, so that we keep the ability to have huge radiuses
-	if r_max < r then
+	if r_max > 0 and r_max < r then
 		return r_max-1,dim_levels
 	end
 	return r,dim_levels
@@ -126,6 +126,14 @@ minetest.after(1, function()
 	cozylights:finalize(cozycids_sunlight_propagates)
 	print(#cozycids_sunlight_propagates)
 	cozylights.cozycids_sunlight_propagates = {}
+	minetest.chat_send_all(">.< Running Cozy Lights 0.2.4 alpha. Some features are still missing or might not work properly and might be fixed tomorrow or next week."..
+	"\n>.< If you experience problems, appreciate if you report them to me(SingleDigitIq) on Minetest forum, Github or Discord."..
+	"\n>.< If you need more of original ideas and blazingly fast code in open source - leave a positive review on ContentDB."..
+	"\n>.< After some people added Cozy Lights to favorites it really seemed to boost rating too, so you can also add it to favorites :>"..
+	"\n>.< This startup message will be removed after beta-test is over."..
+	"\n>.< To open mod settings type in chat /cozysettings or /zs, hopefully tooltips are useful."..
+	"\n>.< Have fun :>"
+	)
 end)
 
 -- adjusting dirfloor might help with some nodes missing. probably the only acceptable way to to eliminate node

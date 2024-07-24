@@ -208,16 +208,99 @@ local spawnlight = {
 	end,
 }
 
+local cozysettingsgui = {
+	privs = {},
+	description = "changes global ambient light settings",
+	func = function(name)
+		local settings_formspec = {
+			"formspec_version[4]",
+			--"size[6,6.4]",
+		  	"size[5.2,5.8]",
+		  	"label[0.95,0.5;Global Cozy Lights Settings]",
+
+			"label[0.95,1.35;Wielded Light Radius]",
+			"field[3.6,1.1;0.7,0.5;wielded_light_radius;;"..cozylights.max_wield_light_radius.."]",
+		  	"tooltip[0.95,1.1;3.4,0.5;If radius is -1 cozy wielded light is disabled, if 0 then only one node will be lit up just like in familiar Minetest wielded light mod.\n"..
+				"If not zero then it's a sphere of affected nodes with specified radius.\n"..
+				"Max radius is 30 as of now. If you run a potato - you may want to decrease it.]",
+
+			"label[0.95,2.05;Global Step Time]",
+			"field[3.6,1.8;0.7,0.5;step_time;;"..cozylights.step_time.."]",
+			"tooltip[0.95,1.8;3.4,0.5;Cozy Lights global step - smaller value will result in more frequent, fluid update, but might be too expensive for potato.\n"..
+			"Valid values are from 0.01 to 10.00]",
+
+			"label[0.95,2.75;Brightness Factor]",
+			"field[3.6,2.5;0.7,0.5;brightness_factor;;"..cozylights.brightness_factor.."]",
+		  	"tooltip[0.95,2.5;3.4,0.5;Brightness factor determines how bright overall(relative to own light source brightness) the light will be.\n"..
+				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
+				"Valid values are from -10.0 to 10.0.\n"..
+				"Brightness factor is not an equivalent of light source brightness(from 1 to 14), it is very low key, affects lights slightly.]",
+
+			"label[0.95,3.45;Reach Factor]",
+			"field[3.6,3.2;0.7,0.5;reach_factor;;"..cozylights.reach_factor.."]",
+			"tooltip[0.95,3.2;3.4,0.5;Reach factor determines how far light of all light source nodes will reach.\n"..
+				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
+				"Valid values are from 0.0 to 10.0.\n"..
+				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
+				"Not recommended to Increase if you run a potato.]",
+
+			"label[0.95,4.15;Dim Factor]",
+			"field[3.6,3.9;0.7,0.5;dim_factor;;"..cozylights.dim_factor.."]",
+			"tooltip[0.95,3.9;3.4,0.5;Dim factor determines how quickly the light loses it's brightness farther from the source.\n"..
+				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
+				"Valid values are from 0.0 to 10.0.\n"..
+				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
+				"Not recommended to Decrease if you run a potato.]",
+
+		  	"button_exit[1.1,4.7;3,0.8;confirm;Confirm]", 
+   		}
+   		minetest.show_formspec(name, "cozylights:settings",table.concat(settings_formspec, ""))
+		return true
+	end,
+}
+
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= ("cozylights:settings") then return end
+	if player == nil then return end
+	if fields.wielded_light_radius then
+		local wielded_light_radius = tonumber(fields.wielded_light_radius) > 30 and 30 or tonumber(fields.wielded_light_radius)
+		wielded_light_radius = wielded_light_radius < -1 and -1 or mf(wielded_light_radius or -1)
+		cozylights:set_wielded_light_radius(wielded_light_radius)
+		cozylights:switch_wielded_light(wielded_light_radius ~= -1)
+	end
+	if fields.step_time then
+		local step_time = tonumber(fields.step_time) > 1 and 1 or tonumber(fields.step_time)
+		step_time = step_time < 0.01 and 0.01 or step_time
+		cozylights:set_step_time(step_time)
+	end
+	if fields.brightness_factor then
+		local brightness_factor = tonumber(fields.brightness_factor) > 10 and 10 or tonumber(fields.brightness_factor)
+		cozylights.brightness_factor = brightness_factor < -10 and -10 or brightness_factor or 3
+		minetest.settings:set("cozylights_brightness_factor",cozylights.brightness_factor)
+	end
+	if fields.reach_factor then
+		local reach_factor = tonumber(fields.reach_factor) > 10 and 10 or tonumber(fields.reach_factor)
+		cozylights.reach_factor = reach_factor < 0 and 0 or reach_factor or 4
+		minetest.settings:set("cozylights_reach_factor",cozylights.reach_factor)
+	end
+	if fields.dim_factor then
+		local dim_factor = tonumber(fields.dim_factor) > 10 and 10 or tonumber(fields.dim_factor)
+		cozylights.dim_factor = dim_factor < 0 and 0 or dim_factor or 9
+		minetest.settings:set("cozylights_dim_factor",cozylights.dim_factor)
+	end
+end)
+
+
 local cozysettings = {
 	params = "<brightness> <reach_factor> <dim_factor>",
 	privs = {},
 	description = "changes global ambient light settings",
-	func = function(name, param)
+	func = function(_, param)
 		local brightness_, reach_factor_, dim_factor_ = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
 		brightness_ = tonumber(brightness_)
 		if brightness_ ~= nil then
-			cozylights.brightness = brightness_
-			minetest.settings:set("cozylights_brightness",brightness_)
+			cozylights.brightness_factor = brightness_
+			minetest.settings:set("cozylights_brightness_factor",brightness_)
 		end
 		reach_factor_ = tonumber(reach_factor_)
 		if reach_factor_ ~= nil then
@@ -372,8 +455,8 @@ minetest.register_chatcommand("zofm", optimizeformobile)
 minetest.register_chatcommand("spawnlight", spawnlight)
 minetest.register_chatcommand("zsl", spawnlight)
 
-minetest.register_chatcommand("cozysettings", cozysettings)
-minetest.register_chatcommand("zs", cozysettings)
+minetest.register_chatcommand("cozysettings", cozysettingsgui)
+minetest.register_chatcommand("zs", cozysettingsgui)
 
 minetest.register_chatcommand("daynightratio", daynightratio)
 minetest.register_chatcommand("zdnr", daynightratio)

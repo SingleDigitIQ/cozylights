@@ -12,7 +12,7 @@ local function destroy_stale_wielded_light(data,param2data,a,cozyplayer)
 	local c_light1 = c_lights[1]
 	local c_light14 = c_lights[14]
 	for j,p in ipairs(cozyplayer.prev_wielded_lights) do
-		if a:containsp(p) then
+		if a and a:containsp(p) then
 			local idx = a:indexp(p)
 			local cid = data[idx]
 			if cid >= c_light1 and cid <= c_light14 then
@@ -102,15 +102,52 @@ function cozylights:wielded_light_cleanup(player,cozyplayer,radius)
 	cozylights:setVoxelManipData(vm,data,nil,true)
 end
 
+local max_wield_light_radius = cozylights.max_wield_light_radius
+
+function cozylights:set_wielded_light_radius(_radius)
+	max_wield_light_radius = _radius
+	minetest.settings:set("cozylights_wielded_light_radius",_radius)
+	cozylights.max_wield_light_radius = _radius
+end
+
 function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,vm,a,data,param2data,emin,emax)
 	local t = os.clock()
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
+	radius = radius > max_wield_light_radius and max_wield_light_radius or radius
+	if radius == 0 then
+		destroy_stale_wielded_light(data,param2data,a,cozyplayer)
+		local node = minetest.get_node(pos)
+		if node.name == "air" or string.match(node.name,"cozylights:") then
+			local brightness_mod = cozy_item.modifiers ~= nil and cozylights.coziest_table[cozy_item.modifiers].brightness or 0
+			local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod) > 0 and mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod) or 0
+			max_light = max_light > 14 and 14 or max_light
+			local cid = minetest.get_content_id("cozylights:light"..max_light)
+			if cid > minetest.get_content_id(node.name) then
+				minetest.set_node(pos,{name="cozylights:light"..max_light,param2=node.param2})
+				cozyplayer.prev_wielded_lights[#cozyplayer.prev_wielded_lights+1] = pos
+			end
+		else
+			pos.y = pos.y - 1
+			local n_name = minetest.get_node(pos).name
+			if n_name == "air" or string.match(n_name,"cozylights:") then
+				local brightness_mod = cozy_item.modifiers ~= nil and cozylights.coziest_table[cozy_item.modifiers].brightness or 0
+				local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod) > 0 and mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod) or 0
+				max_light = max_light > 14 and 14 or max_light
+				local cid = minetest.get_content_id("cozylights:light"..max_light)
+				if cid > minetest.get_content_id(node.name) then
+					minetest.set_node(pos,{name="cozylights:light"..max_light,param2=node.param2})
+					cozyplayer.prev_wielded_lights[#cozyplayer.prev_wielded_lights+1] = pos
+				end
+			end
+		end
+		return
+	end
 	local possible_pos = vector.add(pos,vel)
-	local n_name = minetest.get_node(possible_pos).name
-	if n_name == "air" or string.match(n_name, "cozylights:light") then
+	local node = minetest.get_node(possible_pos)
+	if node.name == "air" or string.match(node.name, "cozylights:light") then
 		pos = possible_pos
-	end	
+	end
 
 	if vm == nil then
 		vm = minetest.get_voxel_manip()

@@ -1,7 +1,5 @@
 local mf = math.floor
 
-local bgcolor = "#a07af0"
-
 local function on_secondary_use(user)
 	local lb = cozylights.cozyplayers[user:get_player_name()].lbrush
 	local settings_formspec = {
@@ -12,13 +10,13 @@ local function on_secondary_use(user)
   		"field[1.5,1.1;3,0.5;radius;radius;"..lb.radius.."]",
 		"tooltip[1.5,0.8;3,0.8;If radius is 0 then only one node will be affected by the brush.\n"..
 			"If not zero then it's a sphere of affected nodes with specified radius.\n"..
-			"As of now max radius is only 120.;"..bgcolor..";#FFFFFF]",
+			"As of now max radius is only 120.]",
   		"field[1.5,2;3,0.5;brightness;brightness;"..lb.brightness.."]",
   		"tooltip[1.5,1.7;3,0.8;Brightness - for most brush modes values are from 1 to 14, corresponding to engine light levels.\n"..
-			"If brush mode is 'darken' or 'override' then 0 will replace lowest light levels with air.;"..bgcolor..";#FFFFFF]",
+			"If brush mode is 'darken' or 'override' then 0 will replace lowest light levels with air.]",
 		"field[1.5,2.9;3,0.5;strength;strength;"..lb.strength.."]",
 		"tooltip[1.5,2.6;3,0.8;Strength, can be from 0 to 1, decimal values of any precision are valid.\n"..
-			"Determines how bright(relative to brightness setting) light nodes in affected area will be.;"..bgcolor..";#FFFFFF]",
+			"Determines how bright(relative to brightness setting) light nodes in affected area will be.]",
 		"label[1.5,3.6;brush mode]",
 		"dropdown[1.5,3.8;3,0.5;mode;default,erase,override,lighten,darken,blend;"..lb.mode.."]",
 		"tooltip[1.5,3.5;3,0.8;\nDefault - replace only dimmer light nodes or air with brush.\n\n"..
@@ -27,13 +25,13 @@ local function on_secondary_use(user)
 			"Lighten - milder than default mode.\n\n"..
 			"Darken - milder erase, does not darken below light 1(does not replace with air).\n\n"..
 			"Blend - blend affected nodes' brigthness with brush brigthness.\n"..
-			"Even though behaves correctly, as of now looks weird and unintuitive if radius is not 0.;"..bgcolor..";#FFFFFF]",
+			"Even though behaves correctly, as of now looks weird and unintuitive if radius is not 0.]",
 		--"checkbox[1.7,4.6;cover_only_surfaces;cover only surfaces;"..(lb.cover_only_surfaces == 1 and "true" or "false").."]",
 		--"tooltip[1.7,4.4;2.6,0.4;if enabled brush will not fill up the air with light above the ground;"..bgcolor..";#FFFFFF]",
 		--"button_exit[1,5.1;4,0.8;confirm;Confirm]",
 		"button_exit[1,4.6;4,0.8;confirm;Confirm]",
 	}
-	minetest.show_formspec(user:get_player_name(), "cozylights:settings",table.concat(settings_formspec, ""))
+	minetest.show_formspec(user:get_player_name(), "cozylights:brush_settings",table.concat(settings_formspec, ""))
 end
 
 minetest.register_tool("cozylights:light_brush", {
@@ -69,7 +67,7 @@ minetest.register_tool("cozylights:light_brush", {
 })
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
-	if formname ~= ("cozylights:settings") then return end
+	if formname ~= ("cozylights:brush_settings") then return end
 	if player == nil then return end
 	local lb = cozylights.cozyplayers[player:get_player_name()].lbrush
 	if fields.brightness then
@@ -103,7 +101,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.cover_only_surfaces then
 	  	lb.cover_only_surfaces = fields.cover_only_surfaces == "true" and 1 or 0
 	end
-  end)
+end)
 
 local function calc_dims_for_brush(brightness, radius, strength, even)
 	local dim_levels = {}
