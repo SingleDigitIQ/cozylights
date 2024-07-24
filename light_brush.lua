@@ -5,21 +5,29 @@ local function on_secondary_use(user)
 	local settings_formspec = {
   		"formspec_version[4]",
   		--"size[6,6.4]",
-		"size[6,5.8]",
-		"label[1.7,0.5;Light Brush Settings]",
-  		"field[1.5,1.1;3,0.5;radius;radius;"..lb.radius.."]",
-		"tooltip[1.5,0.8;3,0.8;If radius is 0 then only one node will be affected by the brush.\n"..
+		"size[5.2,5]",
+		"label[1.45,0.5;Light Brush Settings]",
+
+		"label[0.95,1.35;Radius]",
+  		"field[3.6,1.1;0.7,0.5;radius;;"..lb.radius.."]",
+		"tooltip[0.95,1.1;3.4,0.5;If radius is 0 then only one node will be affected by the brush.\n"..
 			"If not zero then it's a sphere of affected nodes with specified radius.\n"..
-			"As of now max radius is only 120.]",
-  		"field[1.5,2;3,0.5;brightness;brightness;"..lb.brightness.."]",
-  		"tooltip[1.5,1.7;3,0.8;Brightness - for most brush modes values are from 1 to 14, corresponding to engine light levels.\n"..
+			"As of now max radius is only 120.\n"..
+			"With radiuses over 30 mouse hold as of now does not work, only point and click]",
+
+		"label[0.95,2.05;Brightness]",
+  		"field[3.6,1.8;0.7,0.5;brightness;;"..lb.brightness.."]",
+  		"tooltip[0.95,1.8;3.4,0.5;Brightness - for most brush modes values are from 1 to 14, corresponding to engine light levels.\n"..
 			"If brush mode is 'darken' or 'override' then 0 will replace lowest light levels with air.]",
-		"field[1.5,2.9;3,0.5;strength;strength;"..lb.strength.."]",
-		"tooltip[1.5,2.6;3,0.8;Strength, can be from 0 to 1, decimal values of any precision are valid.\n"..
+
+		"label[0.95,2.75;Strength]",
+		"field[3.6,2.5;0.7,0.5;strength;;"..lb.strength.."]",
+		"tooltip[0.95,2.5;3.4,0.5;Strength, can be from 0 to 1, decimal values of any precision are valid.\n"..
 			"Determines how bright(relative to brightness setting) light nodes in affected area will be.]",
-		"label[1.5,3.6;brush mode]",
-		"dropdown[1.5,3.8;3,0.5;mode;default,erase,override,lighten,darken,blend;"..lb.mode.."]",
-		"tooltip[1.5,3.5;3,0.8;\nDefault - replace only dimmer light nodes or air with brush.\n\n"..
+		
+		"label[0.95,3.45;Brush Mode]",
+		"dropdown[2.8,3.2;1.5,0.5;mode;default,erase,override,lighten,darken,blend;"..lb.mode.."]",
+		"tooltip[0.95,3.2;3.4,0.5;\nDefault - replace only dimmer light nodes or air with brush.\n\n"..
 			"Erase - inverse of default, replaces only lighter nodes with darker nodes or air if brightness is 0.\n\n"..	
 			"Override - set light nodes as brush settings dictate regardless of difference in brigthness.\n\n"..
 			"Lighten - milder than default mode.\n\n"..
@@ -29,7 +37,7 @@ local function on_secondary_use(user)
 		--"checkbox[1.7,4.6;cover_only_surfaces;cover only surfaces;"..(lb.cover_only_surfaces == 1 and "true" or "false").."]",
 		--"tooltip[1.7,4.4;2.6,0.4;if enabled brush will not fill up the air with light above the ground;"..bgcolor..";#FFFFFF]",
 		--"button_exit[1,5.1;4,0.8;confirm;Confirm]",
-		"button_exit[1,4.6;4,0.8;confirm;Confirm]",
+		"button_exit[1.1,4;3,0.8;confirm;Confirm]",
 	}
 	minetest.show_formspec(user:get_player_name(), "cozylights:brush_settings",table.concat(settings_formspec, ""))
 end

@@ -252,7 +252,7 @@ local cozysettingsgui = {
 				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
 				"Not recommended to Decrease if you run a potato.]",
 
-		  	"button_exit[1.1,4.7;3,0.8;confirm;Confirm]", 
+		  	"button_exit[1.1,4.7;3,0.8;confirm;Confirm]",
    		}
    		minetest.show_formspec(name, "cozylights:settings",table.concat(settings_formspec, ""))
 		return true
