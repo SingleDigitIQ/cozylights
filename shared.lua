@@ -163,7 +163,7 @@ function cozylights:lightcast(pos, dir, radius,data,param2data,a,dim_levels)
 			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
 				local dim = (dim_levels[i] - light_nerf) >= 1 and (dim_levels[i] - light_nerf) or 1
 				local light = c_lights[dim]
-				if light > cid then
+				if light > cid or param2data[idx] == 0 then
 					data[idx] = light
 					param2data[idx] = dim
 				end
@@ -324,7 +324,7 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 						visited_pos[idx] = true
 						local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 						local light = c_lights[dim]
-						if light > cid then
+						if light > cid or param2data[idx] == 0 then
 							data[idx] = light
 							param2data[idx] = dim
 						end
@@ -332,7 +332,7 @@ function cozylights:lightcast_fix_edges(pos, dir, radius,data,param2data,a,dim_l
 				else
 					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 					local light = c_lights[dim]
-					if light > cid then
+					if light > cid or param2data[idx] == 0 then
 						data[idx] = light
 						param2data[idx] = dim
 					end

@@ -50,6 +50,7 @@ local rebuildlights = {
 			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
 			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
 				then
+					print(node_name)
 					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data)
 				else
 					local single_light_queue = cozylights.single_light_queue
@@ -83,6 +84,7 @@ local fixedges = {
 			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
 			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
 				then
+					print(node_name)
 					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data, true)
 				else
 					local single_light_queue = cozylights.single_light_queue
@@ -226,8 +228,8 @@ local cozysettingsgui = {
 
 			"label[0.95,2.05;Global Step Time]",
 			"field[3.6,1.8;0.7,0.5;step_time;;"..cozylights.step_time.."]",
-			"tooltip[0.95,1.8;3.4,0.5;Cozy Lights global step - smaller value will result in more frequent, fluid update, but might be too expensive for potato.\n"..
-			"Valid values are from 0.01 to 10.00]",
+			"tooltip[0.95,1.8;3.4,0.5;Cozy Lights global step - smaller value will result in more frequent, fluid light update for wielded light, newly generated map chunks if they have light sources and light rebuild when something was destroyed.\n"..
+			"Small values might be too expensive for potato. Valid values are from 0.01 to 10.00]",
 
 			"label[0.95,2.75;Brightness Factor]",
 			"field[3.6,2.5;0.7,0.5;brightness_factor;;"..cozylights.brightness_factor.."]",
@@ -246,7 +248,7 @@ local cozysettingsgui = {
 
 			"label[0.95,4.15;Dim Factor]",
 			"field[3.6,3.9;0.7,0.5;dim_factor;;"..cozylights.dim_factor.."]",
-			"tooltip[0.95,3.9;3.4,0.5;Dim factor determines how quickly the light loses it's brightness farther from the source.\n"..
+			"tooltip[0.95,3.9;3.4,0.5;Dim factor determines how quickly the light fades farther from the source.\n"..
 				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
 				"Valid values are from 0.0 to 10.0.\n"..
 				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..

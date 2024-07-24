@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.3",
+	version = "0.2.5",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
@@ -8,7 +8,7 @@ cozylights = {
 	step_time = tonumber(minetest.settings:get("cozylights_step_time")) or 0.1,
 	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 19,
 	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
-	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", true),
+	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
 	-- this is a table of modifiers for global light source settings.
 	-- lowkeylike and dimlike usually assigned to decorations in hopes to make all ambient naturally occuring light sources weaker
 	-- this is for two reasons:
@@ -106,8 +106,10 @@ minetest.register_on_mods_loaded(function()
 	local cozycids_light_sources = {}
 	local override = cozylights.override_engine_lights
 	for _,def in pairs(minetest.registered_items) do
-		if def.light_source and def.light_source > 0
-		and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
+		if def.light_source and def.light_source > 1
+			and def.drawtype ~= "airlike" and def.drawtype ~= "liquid"
+			--and def.liquid_viscosity == nil and def.liquid_renewable == nil and def.drowning == nil
+		then
 			-- here we are going to define more specific skips and options for sus light sources
 			local skip = false
 			if string.find(def.name, "everness:") ~= false and def.groups.vine ~= nil then
@@ -133,7 +135,9 @@ minetest.register_on_mods_loaded(function()
 			local cid = minetest.get_content_id(def.name)
 			cozycids_sunlight_propagates[cid] = true
 		end
-		if def.light_source and def.light_source > 0 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
+		if def.light_source and def.light_source > 1 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" 
+			--and def.liquid_viscosity == nil and def.liquid_renewable == nil and def.drowning == nil
+		then
 			local cid = minetest.get_content_id(def.name)
 			if cid < c_lights[1] or cid > c_lights[14]+14 then
 				local skip = false
@@ -171,9 +175,10 @@ minetest.register_on_mods_loaded(function()
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
 							on_place = function(cozy_itemstack, placer, pointed_thing)
-								base_on_place(cozy_itemstack, placer, pointed_thing)
 								local nodenameunder = minetest.get_node(pointed_thing.under).name
 								local nodedefunder = minetest.registered_nodes[nodenameunder]
+								base_on_place(cozy_itemstack, placer, pointed_thing)
+								print(def.name)
 								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 									pointed_thing.above.y = pointed_thing.above.y - 1
 									cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
@@ -193,6 +198,7 @@ minetest.register_on_mods_loaded(function()
 							on_place = function(cozy_itemstack, placer, pointed_thing)
 								local nodenameunder = minetest.get_node(pointed_thing.under).name
 								local nodedefunder = minetest.registered_nodes[nodenameunder]
+								print(def.name)
 								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 									pointed_thing.above.y = pointed_thing.above.y - 1
 									cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])

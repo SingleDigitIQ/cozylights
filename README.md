@@ -1,8 +1,12 @@
 # Cozy Lights
 
-Lights which make everything cozy =^__^=
+Improves the way light sources(torches etc) behave and allows to create huge lights, literal projectors with just a mouse click, light map will be computed for you.
 
 Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us, good enough for release. Feedback, suggestions, bug reports are very welcome. **At this dev stage Cozy Lights can be good for builders in creative mode**, survival is somewhat maybiyish okayish but not really.
+
+**Light sources illuminate bigger area with default settings:**
+
+![cozy nodecore](https://raw.githubusercontent.com/SingleDigitIQ/media/main/cozy_nodecore.gif)
 
 Voxel light maps are a complete game changer - it is almost like going from 2d to 3d in terms of depth. You now have 14 shades for every visible building block, and it does not have to register 14 versions of every building block. Cobble only challenge has got a whole lot easier, something fun to look at with the least fun texture is possible now with just this mod :> Disabling smooth lighting might can make for an interesting aesthetic in some cases.
 
@@ -10,7 +14,9 @@ You can also build these lights just like you do with any structures, in other w
 
 It is eventually supposed to become accurate enough so that if you learn how to draw, you will have an easier time understanding how depth and shadows work and what can be done with them.
 
-Wielded cozy light is by default disabled for now, you can enable it in Minetest main menu Settings -> Mods -> Cozy Lights
+**Cozy wielded light:**
+
+![cozy wielded light](https://raw.githubusercontent.com/SingleDigitIQ/media/main/wielded_cozy_light_compressed.gif)
 
 **WARNING:**
 
@@ -30,13 +36,21 @@ If a mod or a game you like is not supported or there are some problems, tell me
 
 ## Light Brush
 
+![creating a massive light with a click](https://raw.githubusercontent.com/SingleDigitIQ/media/main/light_brush_early_alpha_optimized.gif)
+
 *Click or hold left mouse button* to draw light with given settings. Light Brush' reach is 100 nodes, so you can have perspective. Note: with radiuses over 30 nodes as of now mouse hold won't have an effect.
 
 *On right click* settings menu opens up. The menu has hopefully useful tooltips for each setting. You can set radius, brightness, strength and draw mode. There are 6 draw modes so far: default, erase, override, lighten, darken and blend.
 
+![light brush settings](https://raw.githubusercontent.com/SingleDigitIQ/media/main/concise_light_brush_settings_smol.jpg)
+
 ## Chat Commands
 
-Currently max radius is 120 for these commands, and for some it's less than that, if your value is invalid it will adjust to closest valid. Eventually max radius will be much higher. 
+```/cozysettings``` opens a global settings menu for cozy lights, here you can adjust node light sources like torches, meselamps, fireflies, etc to make it work better with potato or make light reach mad far and stuff. Some settings which you can find in Minetest game settings for the mod are still not present here(like override_engine_lights which makes everything nicer). These changes persist after exiting and re-entering the world again.
+
+![Global Cozy Lights Settings](https://raw.githubusercontent.com/SingleDigitIQ/media/main/cozysettings_or_zs_smol.jpg)
+
+Currently max radius is 120 for commands below, if your value is invalid it will adjust to closest valid or throw an error. Some potatoes might experience issues with big radiuses. Eventually max radius will be much bigger.
 
 ```/clearlights <number>``` removes invisible light nodes in area with specified radius. Helpful to remove lights created with light brush. Example usage: ```/clearlights 120```
 
@@ -51,8 +65,6 @@ Currently max radius is 120 for these commands, and for some it's less than that
 ```/optimizeformobile <number>``` removes all cozy light nodes which do not touch a surface of some visible node, like cobble for example. It is maybe useful, because default algo spreads light in a sphere and lights up the air above the ground too, which might be a bit challenging for potato and mobile to render reliably, they might experience FPS drops. Good if you are building a schematic for a multiplayer server. This option might slightly decrease the quality of light map, example: you have a light node with strength of 7 above the ground, and that ground is visible because of that, but after using this option that light node will be removed, so that part of the ground might be left in complete darkness. Basically might make some places darker.
 
 ```/spawnlight <brightness float> <reach_factor float> <dim_factor float>``` spawn a light at your position which does not use user friendly light brush algo, but ambient light algo. "float" means it can be with some arbitrary amount of decimals, or simple integer
-
-```/cozysettings``` opens a global settings menu for cozy lights, here you can adjust node light sources like torches, meselamps, fireflies, etc to make it work better with potato or make light reach mad far and stuff. Some settings which you can find in Minetest game settings for the mod are still not present here(like override_engine_lights which makes everything nicer). These changes persist after exiting and re-entering the world again.
 
 ```/daynightratio <ratio float>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
 
@@ -94,6 +106,8 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - Register unique settings for specific nodes
 
 ## Todo
+
+- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - fix a bug that creates light around an attempt of placing a node, instead of actually placed node
 
@@ -177,9 +191,9 @@ TLDR: LuaJIT is certainly impressive in some parts, however I would rather refra
 
 6. It appears that most popular object positioned most efficiently in memory. I am not entirely certain how exactly does that happen, because I didn't study LuaJIT source since it's underwhelming performance in anything remotely complicated leaves me feeling powerless, so it's not fun. A hack could be a loop that interacts with an object on startup, if you call/interact with the object enough times it will be slightly faster. It is noticeable in massively expensive loops.
 
-7. If you know you are guaranteeed to have an object consume more RAM during runtime, you may want to preallocate if the codebase is complicated and the codebase is complex enough. Well, at least this behavior can be fully expected based on fundamentals.
+7. If you know you are guaranteeed to have an object consume more RAM during runtime, you may want to preallocate if the codebase is complex enough. Well, at least this behavior can be fully expected based on fundamentals.
 
-8. Refrain from having too many hash look-ups, it's not slow by itself, but apparently it clogs cache fast, so sometimes adding just one hash look-up can result in a massive drop in performance. Surprisingly, refrain from having too much of one of the most simplest parts of LuaJIT - math, best is to pull numbers out of Lua' ass, like in Cozy Lights. Luckily predictably this time, branches are the worst in a loop, however this time they are bad even if they cut a massive amount of operations. So you have to balance here, peak performance Lua demands abandoning DRY completely, but that also means you have consume more RAM. Ideal Lua loop is when it does nothing at all, just iterates. Just let Lua iterate.
+8. Refrain from having too many hash look-ups, it's not slow by itself, but apparently it clogs cache fast, so sometimes adding just one hash look-up can result in a massive drop in performance. Surprisingly, refrain from having too much of one of the most simplest parts of LuaJIT - math, best is to pull numbers out of Lua' ass, like in Cozy Lights. Luckily predictably this time, branches are the worst in a loop, however this time they are bad even if they cut a massive amount of operations. So you have to balance here, peak performance Lua demands abandoning DRY completely, but that also means you have to consume more RAM. Ideal Lua loop is when it does nothing at all, just iterates. Just let Lua iterate.
 
 9. You can obviously somewhat control cache with local variables, but there is a catch, it only gives somewhat coherent performance results if the loop is very simple.
 
