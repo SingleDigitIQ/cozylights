@@ -1,13 +1,14 @@
 cozylights = {
 	-- constant size values and tables
+	version = "0.2.3",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
-	brightness = tonumber(minetest.settings:get("cozylights_brightness")) or 8,
+	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
-	cozy_wielded_light = minetest.settings:get_bool("cozylights_wielded_light", false),
-	override_engine_light_sources = minetest.settings:get_bool("cozylights_override_engine_light_sources", false),
-	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
-
+	step_time = tonumber(minetest.settings:get("cozylights_step_time")) or 0.1,
+	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 19,
+	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
+	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", true),
 	-- this is a table of modifiers for global light source settings.
 	-- lowkeylike and dimlike usually assigned to decorations in hopes to make all ambient naturally occuring light sources weaker
 	-- this is for two reasons:
@@ -18,37 +19,37 @@ cozylights = {
 	coziest_table = {
 		--"dimlike"
 		[1] = {
-			brightness = 0,
+			brightness_factor = 0,
 			reach_factor = 0,
 			dim_factor = 0
 		},
 		--"lowkeylike" almost the same as dimlike, but reaches much farther with its barely visible light
 		[2] = {
-			brightness = 0,
+			brightness_factor = 0,
 			reach_factor = 2,
 			dim_factor = -3
 		},
 		-- "candlelike" something-something
 		[3] = {
-			brightness = 0,
+			brightness_factor = 0,
 			reach_factor = 2,
 			dim_factor = -3
 		},
 		-- "torchlike" torches, fires, flames. made much dimmer than what default engine lights makes them
 		[4] = {
-			brightness = -2,
+			brightness_factor = -2,
 			reach_factor = 0,
 			dim_factor = 0
 		},
 		-- "lamplike" a bright source, think mese lamp(actually turned out its like a projector, and below is even bigger projector)
 		[5] = {
-			brightness = 0,
+			brightness_factor = 0,
 			reach_factor = 3,
 			dim_factor = 4
 		},
 		-- "projectorlike" a bright source with massive reach
 		[6] = {
-			brightness = 1,
+			brightness_factor = 1,
 			reach_factor = 3,
 			dim_factor = 4
 		},
@@ -60,10 +61,9 @@ cozylights = {
 	cozycids_sunlight_propagates = {},
 	cozyplayers = {},
 	area_queue = {},
-	light_rebuild_queue = {},
+	single_light_queue = {},
 }
 
-local step_time = 0.1
 local total_dtime = 0
 local total_step_time = 0
 local total_step_count = 0
@@ -79,7 +79,7 @@ dofile(modpath.."/helpers.lua")
 -- in a seemingly perfectly functioning infinite manmade mess, or idk i am not mentally masturbating any further, 
 -- some of the internets do that way too often, way too much
 if cozylights:mod_loaded("br_core") then
-	cozylights.brightness = cozylights.brightness - 6
+	cozylights.brightness_factor = cozylights.brightness_factor - 6
 end
 
 dofile(modpath.."/nodes.lua")
@@ -104,7 +104,7 @@ minetest.register_on_mods_loaded(function()
 	local cozy_items = {}
 	local cozycids_sunlight_propagates = {}
 	local cozycids_light_sources = {}
-	local override = cozylights.override_engine_light_sources
+	local override = cozylights.override_engine_lights
 	for _,def in pairs(minetest.registered_items) do
 		if def.light_source and def.light_source > 0
 		and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" then
@@ -171,9 +171,9 @@ minetest.register_on_mods_loaded(function()
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
 							on_place = function(cozy_itemstack, placer, pointed_thing)
+								base_on_place(cozy_itemstack, placer, pointed_thing)
 								local nodenameunder = minetest.get_node(pointed_thing.under).name
 								local nodedefunder = minetest.registered_nodes[nodenameunder]
-								base_on_place(cozy_itemstack, placer, pointed_thing)
 								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 									pointed_thing.above.y = pointed_thing.above.y - 1
 									cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
@@ -301,7 +301,19 @@ local function build_lights_after_generated(minp,maxp,sources)
 	cozylights:setVoxelManipData(vm,data,param2data,true)
 end
 
-local wielded_light_enabled = cozylights.cozy_wielded_light
+local wield_light_enabled = cozylights.max_wield_light_radius > -1 and true or false
+
+function cozylights:switch_wielded_light(enabled)
+	wield_light_enabled = enabled
+end
+
+local step_time = cozylights.step_time
+
+function cozylights:set_step_time(_time)
+	step_time = _time
+	minetest.settings:set("cozylights_step_time",_time)
+	cozylights.step_time = _time
+end
 
 local light_build_time = 0
 minetest.register_globalstep(function(dtime)
@@ -349,11 +361,11 @@ minetest.register_globalstep(function(dtime)
 					end
 				end
 			end
-			-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
-			-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
-			local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
-			if wielded_light_enabled == true then
-				if pos_hash ~= cozyplayer.pos_hash then
+			if wield_light_enabled == true then
+				-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
+				-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
+				local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
+				if pos_hash ~= cozyplayer.pos_hash or cozyplayer.last_wield ~= wield_name then
 					if cozylights.cozy_items[wield_name] ~= nil then
 						local vel = vector.round(vector.multiply(player:get_velocity(),step_time))
 						cozylights:draw_wielded_light(
@@ -378,9 +390,6 @@ minetest.register_globalstep(function(dtime)
 	end
 end)
 
-
-
-
 local gent_total = 0
 local gent_count = 0
 minetest.register_on_generated(function(minp, maxp, seed)
@@ -402,7 +411,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 					cozy_item=cozy_item
 				}
 			else
-				table.insert(cozylights.light_rebuild_queue, {
+				table.insert(cozylights.single_light_queue, {
 					pos=a:position(i),
 					cozy_item=cozy_item
 				})

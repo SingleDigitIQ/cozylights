@@ -32,7 +32,7 @@ local function darknesscast(pos, dir, radius,data,param2data, a)
 	end
 end
 
-function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
+function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data,fix_edges)
 	local t = os.clock()
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
@@ -57,7 +57,8 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data)
 		return
 	end
 	pos.y = pos.y + ylvl
-	if cozylights.always_fix_edges == true then
+	fix_edges = fix_edges == nil and cozylights.always_fix_edges or fix_edges
+	if fix_edges == true then
 		local visited_pos = {}
 		for i,pos2 in ipairs(sphere_surface) do
 			local end_pos = {x=pos.x+pos2.x,y=pos.y+pos2.y,z=pos.z+pos2.z}
@@ -80,14 +81,14 @@ end
 
 -- handle_async?
 function cozylights:rebuild_light()
-	local light_rebuild_queue = cozylights.light_rebuild_queue
-	if #light_rebuild_queue == 0 then
+	local single_light_queue = cozylights.single_light_queue
+	if #single_light_queue == 0 then
 		return
 	end
-	for i=1,#light_rebuild_queue[1] do
-		cozylights:draw_node_light(light_rebuild_queue[1].pos, light_rebuild_queue[1].cozy_item)
+	for i=1,#single_light_queue[1] do
+		cozylights:draw_node_light(single_light_queue[1].pos, single_light_queue[1].cozy_item)
 	end
-	table.remove(light_rebuild_queue, 1)
+	table.remove(single_light_queue, 1)
 
 end
 
@@ -116,7 +117,7 @@ function cozylights:destroy_light(pos, cozy_item)
 
 	cozylights:setVoxelManipData(vm,data,param2data)
 	
-	local rebuild_range = 75
+	local rebuild_range = 78
 	local rebuild_minp = vector.subtract(pos, rebuild_range)
 	local rebuild_maxp = vector.add(pos, rebuild_range)
 	local posrebuilds = minetest.find_nodes_in_area(
@@ -127,25 +128,24 @@ function cozylights:destroy_light(pos, cozy_item)
 	local pos_hash = pos.x + (pos.y-ylvl)*100 + pos.z*10000
 	local sources = {}
 	if #posrebuilds > 0 then
-		local light_rebuild_queue = cozylights.light_rebuild_queue
+		local single_light_queue = cozylights.single_light_queue
 		for i=1,#posrebuilds do
 			local posrebuild = posrebuilds[i]
 			local posrebuild_hash = posrebuild.x + posrebuild.y*100 + posrebuild.z*10000
 			if posrebuild_hash ~= pos_hash then
 				local node = minetest.get_node(posrebuild)
-				local rebuild_radius, _ = cozylights:calc_dims(cozy_item)
+				local rebuild_radius, _ = cozylights:calc_dims(cozylights.cozy_items[node.name])
 				local max_distance = rebuild_radius + radius
 				if max_distance > vector.distance(pos,posrebuild) then
-					if vector.in_area(vector.subtract(posrebuild,radius), rebuild_minp, rebuild_maxp)
-						and vector.in_area(vector.add(posrebuild,radius), rebuild_minp, rebuild_maxp)
+					if vector.in_area(vector.subtract(posrebuild,rebuild_radius), rebuild_minp, rebuild_maxp)
+						and vector.in_area(vector.add(posrebuild,rebuild_radius), rebuild_minp, rebuild_maxp)
 					then
-						minetest.chat_send_all(node.name)
 						sources[#sources+1] = {
 							pos=posrebuild,
 							cozy_item=cozylights.cozy_items[node.name]
 						}
 					else
-						cozylights.light_rebuild_queue[#light_rebuild_queue+1] = {
+						cozylights.single_light_queue[#single_light_queue+1] = {
 							pos=posrebuilds[i],
 							cozy_item=cozylights.cozy_items[node.name]
 						}
@@ -164,8 +164,7 @@ function cozylights:destroy_light(pos, cozy_item)
 
 	remt_total = remt_total + mf((os.clock() - t) * 1000)
 	remt_count = remt_count + 1
-	--print
-	minetest.chat_send_all("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
+	print("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
 end
 
 --[[

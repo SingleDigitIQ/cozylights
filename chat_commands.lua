@@ -11,12 +11,12 @@ local mf = math.floor
 
 local clearlights = {
 	params = "<size>",
-	description = "removes cozy and debug light nodes",
+	description = "removes cozy and debug light nodes. max radius is 120 for now",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -34,23 +34,31 @@ local clearlights = {
 
 local rebuildlights = {
 	params = "<size>",
-	description = "force rebuilds lights in the area. max radius is 96 for now",
+	description = "force rebuilds lights in the area. max radius is 120 for now",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /rebuildlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 96 then
-			return false, "Radius is too big"
-		end
-		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.source_nodes)
-		print(#posrebuilds)
-
-		local _,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size+25)
-		for i=1,#posrebuilds, 1 do
-			local p = posrebuilds[i]
-			local node = minetest.get_node(p)
-			print(cozylights:dump(node))
-			cozylights:draw_node_light(p, cozylights.cozy_items[node.name],vm,a,data,param2data)
+		if size > 120 then return false, "Radius is too big" end
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size)
+		for i in a:iterp(minp,maxp) do
+			local node_name = minetest.get_name_from_content_id(data[i])
+			local cozy_item = cozylights.cozy_items[node_name]
+			if cozy_item ~= nil then
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local posrebuild = a:position(i)
+			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
+			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
+				then
+					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data)
+				else
+					local single_light_queue = cozylights.single_light_queue
+					single_light_queue[#single_light_queue+1] = {
+						pos=posrebuild,
+						cozy_item=cozy_item
+					}
+				end
+			end
 		end
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
@@ -59,19 +67,33 @@ local rebuildlights = {
 
 local fixedges = {
 	params = "<size>",
-	description = "fixes edges for all lights in the area",
+	description = "same as rebuild lights but additionally fixes edges for all lights in the area, regardless of always_fix_edges setting. max radius is 120",
 	func = function(name, param)
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /fixedges "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
-			return false, "Radius is too big"
+		if size > 120 then return false, "Radius is too big" end
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size)
+		for i in a:iterp(minp,maxp) do
+			local node_name = minetest.get_name_from_content_id(data[i])
+			local cozy_item = cozylights.cozy_items[node_name]
+			if cozy_item ~= nil then
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local posrebuild = a:position(i)
+			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
+			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
+				then
+					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data, true)
+				else
+					local single_light_queue = cozylights.single_light_queue
+					single_light_queue[#single_light_queue+1] = {
+						pos=posrebuild,
+						cozy_item=cozy_item
+					}
+				end
+			end
 		end
-		local posrebuilds = minetest.find_nodes_in_area(vector.subtract(pos, size+1), vector.add(pos, size+1), cozylights.source_nodes)
-		for i=1,#posrebuilds do
-			local node = minetest.get_node(posrebuilds[i])
-			cozylights:draw_node_light(posrebuilds[i], cozylights.cozy_items[node.name])
-		end
+		cozylights:setVoxelManipData(vm,data,param2data,true)
 		return true, "Done."
 	end,
 }
@@ -83,7 +105,7 @@ local cozydebugon = {
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /cozydebugon "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,_,a = cozylights:getVoxelManipData(pos,size)
@@ -105,7 +127,7 @@ local cozydebugoff = {
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /cozydebugoff "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,_,a = cozylights:getVoxelManipData(pos,size)
@@ -127,7 +149,7 @@ local optimizeformobile = {
 		local pos = vector.round(minetest.get_player_by_name(name):getpos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /optimizeformobile "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -186,16 +208,99 @@ local spawnlight = {
 	end,
 }
 
+local cozysettingsgui = {
+	privs = {},
+	description = "changes global ambient light settings",
+	func = function(name)
+		local settings_formspec = {
+			"formspec_version[4]",
+			--"size[6,6.4]",
+		  	"size[5.2,5.8]",
+		  	"label[0.95,0.5;Global Cozy Lights Settings]",
+
+			"label[0.95,1.35;Wielded Light Radius]",
+			"field[3.6,1.1;0.7,0.5;wielded_light_radius;;"..cozylights.max_wield_light_radius.."]",
+		  	"tooltip[0.95,1.1;3.4,0.5;If radius is -1 cozy wielded light is disabled, if 0 then only one node will be lit up just like in familiar Minetest wielded light mod.\n"..
+				"If not zero then it's a sphere of affected nodes with specified radius.\n"..
+				"Max radius is 30 as of now. If you run a potato - you may want to decrease it.]",
+
+			"label[0.95,2.05;Global Step Time]",
+			"field[3.6,1.8;0.7,0.5;step_time;;"..cozylights.step_time.."]",
+			"tooltip[0.95,1.8;3.4,0.5;Cozy Lights global step - smaller value will result in more frequent, fluid update, but might be too expensive for potato.\n"..
+			"Valid values are from 0.01 to 10.00]",
+
+			"label[0.95,2.75;Brightness Factor]",
+			"field[3.6,2.5;0.7,0.5;brightness_factor;;"..cozylights.brightness_factor.."]",
+		  	"tooltip[0.95,2.5;3.4,0.5;Brightness factor determines how bright overall(relative to own light source brightness) the light will be.\n"..
+				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
+				"Valid values are from -10.0 to 10.0.\n"..
+				"Brightness factor is not an equivalent of light source brightness(from 1 to 14), it is very low key, affects lights slightly.]",
+
+			"label[0.95,3.45;Reach Factor]",
+			"field[3.6,3.2;0.7,0.5;reach_factor;;"..cozylights.reach_factor.."]",
+			"tooltip[0.95,3.2;3.4,0.5;Reach factor determines how far light of all light source nodes will reach.\n"..
+				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
+				"Valid values are from 0.0 to 10.0.\n"..
+				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
+				"Not recommended to Increase if you run a potato.]",
+
+			"label[0.95,4.15;Dim Factor]",
+			"field[3.6,3.9;0.7,0.5;dim_factor;;"..cozylights.dim_factor.."]",
+			"tooltip[0.95,3.9;3.4,0.5;Dim factor determines how quickly the light loses it's brightness farther from the source.\n"..
+				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
+				"Valid values are from 0.0 to 10.0.\n"..
+				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
+				"Not recommended to Decrease if you run a potato.]",
+
+		  	"button_exit[1.1,4.7;3,0.8;confirm;Confirm]",
+   		}
+   		minetest.show_formspec(name, "cozylights:settings",table.concat(settings_formspec, ""))
+		return true
+	end,
+}
+
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= ("cozylights:settings") then return end
+	if player == nil then return end
+	if fields.wielded_light_radius then
+		local wielded_light_radius = tonumber(fields.wielded_light_radius) > 30 and 30 or tonumber(fields.wielded_light_radius)
+		wielded_light_radius = wielded_light_radius < -1 and -1 or mf(wielded_light_radius or -1)
+		cozylights:set_wielded_light_radius(wielded_light_radius)
+		cozylights:switch_wielded_light(wielded_light_radius ~= -1)
+	end
+	if fields.step_time then
+		local step_time = tonumber(fields.step_time) > 1 and 1 or tonumber(fields.step_time)
+		step_time = step_time < 0.01 and 0.01 or step_time
+		cozylights:set_step_time(step_time)
+	end
+	if fields.brightness_factor then
+		local brightness_factor = tonumber(fields.brightness_factor) > 10 and 10 or tonumber(fields.brightness_factor)
+		cozylights.brightness_factor = brightness_factor < -10 and -10 or brightness_factor or 3
+		minetest.settings:set("cozylights_brightness_factor",cozylights.brightness_factor)
+	end
+	if fields.reach_factor then
+		local reach_factor = tonumber(fields.reach_factor) > 10 and 10 or tonumber(fields.reach_factor)
+		cozylights.reach_factor = reach_factor < 0 and 0 or reach_factor or 4
+		minetest.settings:set("cozylights_reach_factor",cozylights.reach_factor)
+	end
+	if fields.dim_factor then
+		local dim_factor = tonumber(fields.dim_factor) > 10 and 10 or tonumber(fields.dim_factor)
+		cozylights.dim_factor = dim_factor < 0 and 0 or dim_factor or 9
+		minetest.settings:set("cozylights_dim_factor",cozylights.dim_factor)
+	end
+end)
+
+
 local cozysettings = {
 	params = "<brightness> <reach_factor> <dim_factor>",
 	privs = {},
 	description = "changes global ambient light settings",
-	func = function(name, param)
+	func = function(_, param)
 		local brightness_, reach_factor_, dim_factor_ = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
 		brightness_ = tonumber(brightness_)
 		if brightness_ ~= nil then
-			cozylights.brightness = brightness_
-			minetest.settings:set("cozylights_brightness",brightness_)
+			cozylights.brightness_factor = brightness_
+			minetest.settings:set("cozylights_brightness_factor",brightness_)
 		end
 		reach_factor_ = tonumber(reach_factor_)
 		if reach_factor_ ~= nil then
@@ -239,7 +344,7 @@ local cozyadjust = {
 		adjust_by = mf(tonumber(adjust_by) or 1)
 		keep_map = mf(tonumber(keep_map) or 1)
 		minetest.log("action", name .. " uses /clearlights "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -289,7 +394,7 @@ local fixtorches = {
 		local pos = vector.round(placer:getpos())
 		local size = mf(tonumber(param) or cozylights.default_size)
 		minetest.log("action", name .. " uses /fixtorches "..size.." at position: "..cozylights:dump(pos))
-		if size >= 121 then
+		if size > 120 then
 			return false, "Radius is too big"
 		end
 		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
@@ -350,8 +455,8 @@ minetest.register_chatcommand("zofm", optimizeformobile)
 minetest.register_chatcommand("spawnlight", spawnlight)
 minetest.register_chatcommand("zsl", spawnlight)
 
-minetest.register_chatcommand("cozysettings", cozysettings)
-minetest.register_chatcommand("zs", cozysettings)
+minetest.register_chatcommand("cozysettings", cozysettingsgui)
+minetest.register_chatcommand("zs", cozysettingsgui)
 
 minetest.register_chatcommand("daynightratio", daynightratio)
 minetest.register_chatcommand("zdnr", daynightratio)

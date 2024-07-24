@@ -16,9 +16,9 @@ Wielded cozy light is by default disabled for now, you can enable it in Minetest
 
 **1. after removing Cozy Lights from your world you will be left with spheres of unknown nodes. Easiest could be to reenable the mod and call ```/clearlights``` in all locations Cozy Lights are active.**
 
-**2. if you have override_engine_light_sources enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_light_sources is disabled by default, so it should be safe.**
+**2. if you have override_engine_lights enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_lights is disabled by default, so it should be safe.**
 
-**3. worldedit:placeholder nodes can prevent light map from working properly, and this currenly happens without notice or options provided.**
+**3. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. There can be other invisible nodes from some mods and games which would interfere with light map.**
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
@@ -52,7 +52,7 @@ Currently max radius is 120 for these commands, and for some it's less than that
 
 ```/spawnlight <brightness float> <reach_factor float> <dim_factor float>``` spawn a light at your position which does not use user friendly light brush algo, but ambient light algo. "float" means it can be with some arbitrary amount of decimals, or simple integer
 
-```/cozysettings <brightness float or ~> <reach_factor float or ~> <dim_factor float or ~>``` change global settings for node light sources like torches, meselamps, fireflies, etc. Put ```~``` instead of a float and previous setting for that value will remain unchanged. This change persists after exiting and re-entering the world again.
+```/cozysettings``` opens a global settings menu for cozy lights, here you can adjust node light sources like torches, meselamps, fireflies, etc to make it work better with potato or make light reach mad far and stuff. Some settings which you can find in Minetest game settings for the mod are still not present here(like override_engine_lights which makes everything nicer). These changes persist after exiting and re-entering the world again.
 
 ```/daynightratio <ratio float>``` change Minetest engine day_night_ratio for the player who used the command. ```0``` is the darkest night possible, you can observe how dark it can be on the screenshots, was useful in testing, probably will help with building too. ```1``` is the brightest possible day. Some gradations in between are maybe under appreciated and seem pretty moody, I guess that would depend on a texture pack.
 
@@ -93,11 +93,9 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - Register unique settings for specific nodes
 
-# todo
+## Todo
 
 - fix a bug that creates light around an attempt of placing a node, instead of actually placed node
-
-- limit wielded_light radius and enable it by default, instead of enable/disable setting, use setting of max radius for wielded light, if -1 - then its disabled
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
@@ -161,7 +159,33 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - ci for optional_depends auto update according to content db mods/games updates and releases
 
-LICENSE
+### Some expensive notes stackoverflow will never tell about LuaJIT to you or to future me. Summing up my discord rambling because COVID made me forget some of Lua I tried before, so I am writing it down for now.
+
+TLDR: LuaJIT is certainly impressive in some parts, however I would rather refrain from using it for absolutely anything that implies even a bit of performance, unless there is no way to avoid it. It's too slow, and when you try to squeeze anything out of it, it loses most of it appeal/narrative, it even loses purpose. If still too many words, remember just this about Lua: never try to optimize Lua too much, it's never worth it, and, just let Lua iterate. Hating on LuaJIT is based and normalpilled, it's just faster Python.
+
+1. While being smol, it still fails to outperform another state of the art JIT - JS V8. Given that JS V8 is big tech kind state of the art, which means there is certainly at the very least a significant room for improvement. Advantage of Lua in comparison to V8: less RAM consuption for small programs, so it's reasonable to run a bit of LuaJIT on weak hardware, like phones, watches, some smart-whatever, robots. It's not the worst choice.
+
+2. Readability syntax sugar is a meme, I am here to code, not to shitpost, I prefer completely different state of mind from that, something very different, like curly braces and what not.
+
+3. Lua bytecode, same way as Python, keeps function and variable names uncompressed. You could argue but hey that means we can at least restore the original file almost one-to-one from bytecode? Who needs that really, when RAM efficiency is 25%(!) better after using a minifier, and if you use minifier, you abandon debugging and readability(just like in Python, which is a meme language too, and it's typical very readable one letter long variable names). This is how as codebase grows, Lua loses it's only advantage over V8. Hence technically peak Lua is a joke.
+
+3. Peak performance Lua cant be, without a lot of effort, transpiled and rewritten into peak performance compiled language, since it's behavior and optimization techniques are drastically different and by that I mean next level drastically different. Therefore it's not as good for prototyping as JS V8, unless you denounce the very idea of optimizing Lua as heresy.
+
+4. LuaJIT does so much behind your back, so that performance becomes exhaustingly unpredictable. Stuff that works in nearly any other language does not work here, and you will often have to rely on profiler no matter how good you are with Lua, rather than act according to assumptions based on fundamentals. You could even say that what you have to do when Lua performance is concerned, is literal trial and error. You then find a sweet spot and never touch that part of the code again, because it's impossible to reason with/reliably reproduce/improve upon.
+
+5. While you could cope that CPU just does not have enough cache and all, clearly, LuaJIT is best at optimizing *simple* loops. Branches, hash look ups, math? Try your best to decrease the amount for all of those in a loop. It appears that Lua would rather iterate uselessly over and over again the same entries, than have a branch to cut amount of iterations/operations in general. Optimization tip is basically this: try to break down a complicated loop into several simpler loops. LuaJIT is ridiculously fast with simple loops.
+
+6. It appears that most popular object positioned most efficiently in memory. I am not entirely certain how exactly does that happen, because I didn't study LuaJIT source since it's underwhelming performance in anything remotely complicated leaves me feeling powerless, so it's not fun. A hack could be a loop that interacts with an object on startup, if you call/interact with the object enough times it will be slightly faster. It is noticeable in massively expensive loops.
+
+7. If you know you are guaranteeed to have an object consume more RAM during runtime, you may want to preallocate if the codebase is complicated and the codebase is complex enough. Well, at least this behavior can be fully expected based on fundamentals.
+
+8. Refrain from having too many hash look-ups, it's not slow by itself, but apparently it clogs cache fast, so sometimes adding just one hash look-up can result in a massive drop in performance. Surprisingly, refrain from having too much of one of the most simplest parts of LuaJIT - math, best is to pull numbers out of Lua' ass, like in Cozy Lights. Luckily predictably this time, branches are the worst in a loop, however this time they are bad even if they cut a massive amount of operations. So you have to balance here, peak performance Lua demands abandoning DRY completely, but that also means you have consume more RAM. Ideal Lua loop is when it does nothing at all, just iterates. Just let Lua iterate.
+
+9. You can obviously somewhat control cache with local variables, but there is a catch, it only gives somewhat coherent performance results if the loop is very simple.
+
+10. LuaJIT can crash during trying to allocate too much memory in one go as if it's in the earliest dev stage and not ready for prod. JS V8 maybe leaks, but at least does not crash just like that.
+
+## LICENSE
 
 MIT for my code, will appreciate reasonable attribution
 
