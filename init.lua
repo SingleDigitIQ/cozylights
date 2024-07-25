@@ -411,10 +411,12 @@ end)
 
 local gent_total = 0
 local gent_count = 0
+
 minetest.register_on_generated(function(minp, maxp, seed)
 	local pos = vector.add(minp, vector.floor(vector.divide(vector.subtract(maxp,minp), 2)))
 	local light_sources = minetest.find_nodes_in_area(minp,maxp,cozylights.source_nodes)
-	if #light_sources == 0 then
+	if #light_sources == 0 or #light_sources > 2000 then
+		print("Error: too many light sources around "..cozylights:dump(pos).." Report this to Cozy Lights dev")
 		return
 	end
 	minetest.chat_send_all("radius x is: "..mf((maxp.x-minp.x)/2))
@@ -451,8 +453,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				local source_minp = vector.subtract(rel_p,radius)
 				local source_maxp = vector.add(rel_p,radius)
 				local minp_dif = vector.subtract(rel_minp, source_minp)
-				local required_radius = minp_dif.x > 0 and minp_dif.x or 0
-				required_radius = minp_dif.y > required_radius and minp_dif.y or required_radius
+				local required_radius = minp_dif.x > minp_dif.y and minp_dif.x or minp_dif.y
 				required_radius = minp_dif.z > required_radius and minp_dif.z or required_radius
 				local maxp_dif = vector.subtract(rel_maxp, source_maxp)
 				required_radius = maxp_dif.x > required_radius and maxp_dif.x or required_radius
