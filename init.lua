@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.5",
+	version = "0.2.6",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
@@ -419,9 +419,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		print("Error: too many light sources around "..cozylights:dump(pos).." Report this to Cozy Lights dev")
 		return
 	end
-	minetest.chat_send_all("radius x is: "..mf((maxp.x-minp.x)/2))
-	minetest.chat_send_all("radius y is: "..mf((maxp.y-minp.y)/2))
-	minetest.chat_send_all("radius z is: "..mf((maxp.z-minp.z)/2))
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local t = os.clock()
 	local sources = {}
@@ -459,10 +456,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				required_radius = maxp_dif.x > required_radius and maxp_dif.x or required_radius
 				required_radius = maxp_dif.y > required_radius and maxp_dif.y or required_radius
 				required_radius = maxp_dif.z > required_radius and maxp_dif.z or required_radius
-				if required_radius > 120 then
-					minetest.chat_send_all("aborting, required_radius is: "..required_radius)
-				end
-				minetest.chat_send_all("required_radius is: "..required_radius)
 				minp_exp,maxp_exp,_,data,_,a = cozylights:getVoxelManipData(pos, required_radius)
 				--local origin = a:position(i)
 				sources[#sources+1] = {
