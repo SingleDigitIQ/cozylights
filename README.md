@@ -24,15 +24,17 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 **2. if you have override_engine_lights enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_lights is disabled by default, so it should be safe.**
 
-**3. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. There can be other invisible nodes from some mods and games which would interfere with light map.**
-
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
-## Supported mods and games
+## Known issues
 
-Most of the most popular ones on paper, but its early alpha, so it can still be broken. It's not just popular ones, actually no idea how many it supports, some of them are not even on ContentDB.
+1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. There can be other invisible nodes from some mods and games which would interfere with light map.
 
-If a mod or a game you like is not supported or there are some problems, tell me, I will see what can be done. You can just drop a list of mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game with meticulous consideration, but we are not at that stage yet.
+2. Nodecore dynamic lights do not update cozy light map after changing charge.
+
+3. Voxelibre/Mineclonia structures and villages are not getting cozy automatically as of now, because they are probably being placed asynchronously and seems like they provide no api/callback. Eventually will fix it.
+
+4. Cozy Lights together with K Ambient Light will freeze. Not recommended until resolved.
 
 ## Light Brush
 
@@ -93,6 +95,12 @@ Shortcuts for all commands follow a convention to easier memorize them:
 
 ```za``` - cozyadjust
 
+## Supported mods and games
+
+Most of the most popular ones on paper, but its early alpha, so it can still be broken. It's not just popular ones, actually no idea how many it supports, some of them are not even on ContentDB.
+
+If a mod or a game you like is not supported or there are some problems, tell me, I will see what can be done. You can just drop a list of mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game with meticulous consideration, but we are not at that stage yet.
+
 ## For Developers
 
 There are like I think 5 algo versions of drawing lights or I refactored that, because I never heard of DRY, never happened. All algos sacrifice accuracy for speed and miss some nodes for huge spheres.
@@ -107,9 +115,17 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
+- fix weird artifacts i can see only in mineclone, assuming its probably because mineclone generates some stuff like structures with a delay, and therefore original terrain looks a lot different to final result, and cozy lights most likely act based on original rather than final
 
-- fix a bug that creates light around an attempt of placing a node, instead of actually placed node
+- fix nodecore dynamic light source not updating the brightness/radius
+
+- fix mineclone structures not getting lit on generated, apparently the issue is about schematics, cozy lights for some reason cant react to mineclone placed schematics, its either they are placed with a delay or its normal behavior for schematics which are not placed as decorations or with a vmanip, either way, it's a bigger issue not just mineclone' issue
+
+- during generation sometimes lights are not fully generated. possibly need to force emerge/load(if that is even possible), and maybe check for a:containsp
+
+- add privileges so schematics can be used on multiplayer server
+
+- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
@@ -136,8 +152,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - add optional more pleasant day/night cycle
 
 - add optional sky textures
-
-- add priveleges so schematics can be used on multiplayer server
 
 - add multiplayer/mobile settings(very little light nodes, very simple light map), and mid settings(more or less okayish), max is default
 
