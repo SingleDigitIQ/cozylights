@@ -108,11 +108,13 @@ minetest.register_on_mods_loaded(function()
 	for _,def in pairs(minetest.registered_items) do
 		if def.light_source and def.light_source > 1
 			and def.drawtype ~= "airlike" and def.drawtype ~= "liquid"
-			--and def.liquid_viscosity == nil and def.liquid_renewable == nil and def.drowning == nil
+			and string.find(def.name, "lava_flowing") == nil
+			and string.find(def.name, "lava_source") == nil
+			--and def.liquid_renewable == nil and def.drowning == nil
 		then
 			-- here we are going to define more specific skips and options for sus light sources
 			local skip = false
-			if string.find(def.name, "everness:") ~= false and def.groups.vine ~= nil then
+			if string.find(def.name, "everness:") ~= nil and def.groups.vine ~= nil then
 				skip = true -- like goto :continue:
 			end
 			if skip == false then
@@ -135,13 +137,16 @@ minetest.register_on_mods_loaded(function()
 			local cid = minetest.get_content_id(def.name)
 			cozycids_sunlight_propagates[cid] = true
 		end
-		if def.light_source and def.light_source > 1 and def.drawtype ~= "airlike" and def.drawtype ~= "liquid" 
+		if def.light_source and def.light_source > 1
+			and def.drawtype ~= "airlike" and def.drawtype ~= "liquid"
+			and not string.find(def.name, "lava_flowing")
+			and not string.find(def.name, "lava_source")
 			--and def.liquid_viscosity == nil and def.liquid_renewable == nil and def.drowning == nil
 		then
 			local cid = minetest.get_content_id(def.name)
 			if cid < c_lights[1] or cid > c_lights[14]+14 then
 				local skip = false
-				if string.find(def.name, "everness:") ~= false and def.groups.vine ~= nil then
+				if string.find(def.name, "everness:") ~= nil and def.groups.vine ~= nil then
 					skip = true -- like goto :continue:
 				end
 				if skip == false then
@@ -165,26 +170,29 @@ minetest.register_on_mods_loaded(function()
 							end,
 						})
 					end
-					if def.on_place ~= nil then
-						local base_on_place = def.on_place
+					if def.on_construct ~= nil then
+						local base_on_construct = def.on_construct
 						local light = override == true and 1 or def.light_source
 						if def.name == "br_core:ceiling_light_1" then
 							light = def.light_source - 7
 						end
 						minetest.override_item(node,{
+							--tiles = {"test.png"},
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
-							on_place = function(cozy_itemstack, placer, pointed_thing)
-								local nodenameunder = minetest.get_node(pointed_thing.under).name
-								local nodedefunder = minetest.registered_nodes[nodenameunder]
-								base_on_place(cozy_itemstack, placer, pointed_thing)
+							--on_place = function(cozy_itemstack, placer, pointed_thing)
+							on_construct = function(pos)
+								--local nodenameunder = minetest.get_node(pointed_thing.under).name
+								--local nodedefunder = minetest.registered_nodes[nodenameunder]
+								base_on_construct(pos)
 								print(def.name)
-								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
-									pointed_thing.above.y = pointed_thing.above.y - 1
-									cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
-								else
-									cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
-								end
+								cozylights:draw_node_light(pos, cozy_items[def.name])
+								--if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
+								--	pointed_thing.above.y = pointed_thing.above.y - 1
+								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
+								--else
+								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
+								--end
 							end,
 						})
 					else
@@ -193,18 +201,21 @@ minetest.register_on_mods_loaded(function()
 							light = def.light_source - 7
 						end
 						minetest.override_item(node,{
+							--tiles = {"test.png"},
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
-							on_place = function(cozy_itemstack, placer, pointed_thing)
-								local nodenameunder = minetest.get_node(pointed_thing.under).name
-								local nodedefunder = minetest.registered_nodes[nodenameunder]
+							--on_place = function(cozy_itemstack, placer, pointed_thing)
+							on_construct = function(pos)
+								--local nodenameunder = minetest.get_node(pointed_thing.under).name
+								--local nodedefunder = minetest.registered_nodes[nodenameunder]
 								print(def.name)
-								if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
-									pointed_thing.above.y = pointed_thing.above.y - 1
-									cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
-								else
-									cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
-								end	
+								cozylights:draw_node_light(pos, cozy_items[def.name])
+								--if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
+								--	pointed_thing.above.y = pointed_thing.above.y - 1
+								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
+								--else
+								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
+								--end
 							end,
 						})
 					end
@@ -327,16 +338,18 @@ minetest.register_globalstep(function(dtime)
 	if total_dtime > step_time then
 		total_dtime = 0
 		light_build_time = light_build_time + step_time
-		if light_build_time > 0.3 then
+		if light_build_time > step_time*2 then
 			light_build_time = 0
 			if #cozylights.area_queue ~= 0 then
 				local ar = cozylights.area_queue[1]
-				build_lights_after_generated(ar.minp,ar.maxp,ar.sources)
 				table.remove(cozylights.area_queue, 1)
+				print("build_lights_after_generated")
+				build_lights_after_generated(ar.minp,ar.maxp,ar.sources)
+			else
+				cozylights:rebuild_light()
 			end
 		end
 		local t = os.clock()
-		cozylights:rebuild_light()
 		for _,cozyplayer in pairs(cozylights.cozyplayers) do
 			local player = minetest.get_player_by_name(cozyplayer.name)
 			local pos = vector.round(player:getpos())
@@ -399,28 +412,75 @@ end)
 local gent_total = 0
 local gent_count = 0
 minetest.register_on_generated(function(minp, maxp, seed)
-	local t = os.clock()
+	local pos = vector.add(minp, vector.floor(vector.divide(vector.subtract(maxp,minp), 2)))
+	local light_sources = minetest.find_nodes_in_area(minp,maxp,cozylights.source_nodes)
+	if #light_sources == 0 then
+		return
+	end
+	minetest.chat_send_all("radius x is: "..mf((maxp.x-minp.x)/2))
+	minetest.chat_send_all("radius y is: "..mf((maxp.y-minp.y)/2))
+	minetest.chat_send_all("radius z is: "..mf((maxp.z-minp.z)/2))
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
+	local t = os.clock()
+	local sources = {}
+	local minp_exp,maxp_exp = minp, maxp
 	local a = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	local data = vm:get_data()
-	local sources = {}
-	for i in a:iterp(minp, maxp) do
+	for _, p in pairs(light_sources) do
+	--for i in a:iterp(minp, maxp) do
+		local i = a:indexp(p)
 		local cid = data[i]
 		if cozylights.cozycids_light_sources[cid] == true then
 			local name = minetest.get_name_from_content_id(cid)
 			local cozy_item = cozylights.cozy_items[name]
-			local pos = a:position(i)
+			--local pos = a:position(i)
 			local radius, _ = cozylights:calc_dims(cozy_item)
-			if a:containsp(vector.subtract(pos,radius)) and a:containsp(vector.add(pos,radius)) then
+			print(name)
+			if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius)) then
+				print("adding "..name.." to area_queue")
 				sources[#sources+1] = {
-					pos=pos,
+					--pos=pos,
+					pos=p,
 					cozy_item=cozy_item
 				}
 			else
-				table.insert(cozylights.single_light_queue, {
-					pos=a:position(i),
+				-- expand area
+				local rel_p = vector.subtract(p,pos)
+				local rel_minp = vector.subtract(minp_exp,pos)
+				local rel_maxp = vector.subtract(maxp_exp,pos)
+				local source_minp = vector.subtract(rel_p,radius)
+				local source_maxp = vector.add(rel_p,radius)
+				local minp_dif = vector.subtract(rel_minp, source_minp)
+				local required_radius = minp_dif.x > 0 and minp_dif.x or 0
+				required_radius = minp_dif.y > required_radius and minp_dif.y or required_radius
+				required_radius = minp_dif.z > required_radius and minp_dif.z or required_radius
+				local maxp_dif = vector.subtract(rel_maxp, source_maxp)
+				required_radius = maxp_dif.x > required_radius and maxp_dif.x or required_radius
+				required_radius = maxp_dif.y > required_radius and maxp_dif.y or required_radius
+				required_radius = maxp_dif.z > required_radius and maxp_dif.z or required_radius
+				if required_radius > 120 then
+					minetest.chat_send_all("aborting, required_radius is: "..required_radius)
+				end
+				minetest.chat_send_all("required_radius is: "..required_radius)
+				minp_exp,maxp_exp,_,data,_,a = cozylights:getVoxelManipData(pos, required_radius)
+				--local origin = a:position(i)
+				sources[#sources+1] = {
+					--pos=pos,
+					pos=p,
 					cozy_item=cozy_item
-				})
+				}
+				--if #cozylights.single_light_queue > 0 then
+				--	local prev_source = cozylights.single_light_queue[#cozylights.single_light_queue]
+				--	local radius, _ = cozylights:calc_dims(prev_source.cozy_item)
+				--	local possible_area_min = vector.subtract(pos,radius)
+				--	local possible_area_max = vector.add(pos,radius)
+				--else
+					--print("adding "..name.." to single_light_queue")
+					--table.insert(cozylights.single_light_queue, {
+					--	pos=origin,
+					--	cozy_item=cozy_item
+					--})
+				--end
 			end
 		end
 	end
@@ -428,11 +488,12 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
 	print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
-	
 	if #sources > 0 then
 		cozylights.area_queue[#cozylights.area_queue+1]={
-			minp=vector.subtract(minp,39),
-			maxp=vector.add(maxp,39),
+			--minp=vector.subtract(minp,39),
+			--maxp=vector.add(maxp,39),
+			minp=minp_exp,
+			maxp=maxp_exp,
 			sources=sources
 		}
 	end

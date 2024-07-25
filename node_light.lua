@@ -85,9 +85,8 @@ function cozylights:rebuild_light()
 	if #single_light_queue == 0 then
 		return
 	end
-	for i=1,#single_light_queue[1] do
-		cozylights:draw_node_light(single_light_queue[1].pos, single_light_queue[1].cozy_item)
-	end
+	print("#single_light_queue is: "..#single_light_queue)
+	cozylights:draw_node_light(single_light_queue[1].pos, single_light_queue[1].cozy_item)
 	table.remove(single_light_queue, 1)
 
 end

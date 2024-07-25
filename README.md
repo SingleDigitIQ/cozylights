@@ -107,9 +107,17 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
+- fix weird artifacts i can see only in mineclone, assuming its probably because mineclone generates some stuff like structures with a delay, and therefore original terrain looks a lot different to final result, and cozy lights sometimes act based on original rather than final
 
-- fix a bug that creates light around an attempt of placing a node, instead of actually placed node
+- fix nodecore dynamic light source not updating the radius and brightness
+
+- fix mineclone structures are not getting lit on generated, apparently the issue is about schematics, for some reason cozy lights cant react to placed schematics, so it's a bigger issue not just mineclone
+
+- during generation, something happens and sometimes lights are not fully generated. possibly need to force emerge/load
+
+- add privileges so schematics can be used on multiplayer server
+
+- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
@@ -136,8 +144,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - add optional more pleasant day/night cycle
 
 - add optional sky textures
-
-- add priveleges so schematics can be used on multiplayer server
 
 - add multiplayer/mobile settings(very little light nodes, very simple light map), and mid settings(more or less okayish), max is default
 
