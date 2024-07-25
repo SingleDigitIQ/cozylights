@@ -24,8 +24,6 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 **2. if you have override_engine_lights enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_lights is disabled by default, so it should be safe.**
 
-*For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
-
 ## Known issues
 
 1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. There can be other invisible nodes from some mods and games which would interfere with light map.
@@ -35,6 +33,8 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 3. Voxelibre/Mineclonia structures and villages are not getting cozy automatically as of now, because they are probably being placed asynchronously and seems like they provide no api/callback. Eventually will fix it.
 
 4. Cozy Lights together with K Ambient Light will freeze. Not recommended until resolved.
+
+*For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
 ## Light Brush
 
