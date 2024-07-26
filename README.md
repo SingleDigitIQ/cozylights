@@ -28,11 +28,15 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. There can be other invisible nodes from some mods and games which would interfere with light map.
 
-2. Nodecore dynamic lights do not update cozy light map after changing charge.
+2. You will have to disable K Ambient Light to use Cozy Lights, together, they are not recommended for now.
 
-3. Voxelibre/Mineclonia structures and villages are not getting cozy automatically as of now, because they are probably being placed asynchronously and seems like they provide no api/callback. Eventually will fix it.
+3. Light emitting liquids always straight up ignored, light emitting airlikes too
 
-4. Cozy Lights together with K Ambient Light will freeze. Not recommended until resolved.
+4. When there are too many light sources in a generated area, it gets ignored. If you run /rebuildlights in such area, it will attempt to do so, but probably would need too much time
+
+5. If you are moving too fast(creative or falling from above) and its first time you visit many areas, generation will not look like it's immediate
+
+6. Some lights are still being missed in generated mapblocks
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
@@ -99,7 +103,17 @@ Shortcuts for all commands follow a convention to easier memorize them:
 
 Most of the most popular ones on paper, but its early alpha, so it can still be broken. It's not just popular ones, actually no idea how many it supports, some of them are not even on ContentDB.
 
-If a mod or a game you like is not supported or there are some problems, tell me, I will see what can be done. You can just drop a list of mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game with meticulous consideration, but we are not at that stage yet.
+For definitely supported games, check the section of supported games on ContentDB, or mod.conf, if the game is in a list then support is full for what the mod can currently do, current *known* exceptions are:
+
+**Nodecore** - partial support, light map does not update for dynamic light sources(the ones that change brightness over time)
+
+**Age of Mending** - partial support, too many light sources in caves sometimes, and so far Cozy Lights cant process that without completely freezing everything for some time
+
+**Piranesi** - does not seem to work at all, probably something schematic related
+
+**Shadow Forest** - it works as intended, but there is only campfire to make cozy, wont feel like an upgrade
+
+If a mod or a game you like is not supported or there are some problems not listed here, tell me immediately. You can just drop a list of games/mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game/mod with meticulous consideration, but we are not at that stage yet.
 
 ## For Developers
 
@@ -115,13 +129,15 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- make sure bigger lights wont go unnoticed in on_generated and schematic placement
+- algo for many adjacent lights
 
-- sometimes required_radius is negative in on_generated
+- see what can be done about snow and slabs not passing the light through
+
+- make step autoadjust if something is too slow for user hardware, maybe also add setting for that
+
+- make sure bigger lights wont go unnoticed in on_generated and schematic placement. apparnetly on generated can support lights up to 80 if max area radius is 120
 
 - fix nodecore dynamic light source not updating the brightness/radius
-
-- during generation sometimes lights are not fully generated. possibly need to force emerge/load(if that is even possible), in the worst case scenario maybe check for a:containsp, even though that is expensive
 
 - add privileges so schematics can be used on multiplayer server
 
@@ -131,7 +147,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
-- illuminate transparent liquids too, except dont make floodable light sources work underwater just like in original wielded light
+- illuminate transparent liquids too if possible without making it look weird, except dont make floodable light sources work underwater just like in original wielded light
 
 - parse minetest forum for optional_depends
 

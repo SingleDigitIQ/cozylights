@@ -74,9 +74,9 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data,fix_edges
 	if update_needed == 1 then
 		cozylights:setVoxelManipData(vm,data,param2data,true)
 	end
-	--gent_total = gent_total + mf((os.clock() - t) * 1000)
-	--gent_count = gent_count + 1
-	--print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	gent_total = gent_total + mf((os.clock() - t) * 1000)
+	gent_count = gent_count + 1
+	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 
 -- handle_async?

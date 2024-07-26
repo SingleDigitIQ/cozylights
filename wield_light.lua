@@ -114,7 +114,6 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	local t = os.clock()
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
-	print("wielded dim_levels: "..cozylights:dump(dim_levels))
 	radius = radius > max_wield_light_radius and max_wield_light_radius or radius
 	if radius == 0 then
 		destroy_stale_wielded_light(data,param2data,a,cozyplayer)
@@ -207,6 +206,6 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	cozyplayer.last_wield_radius = radius
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	--print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 
