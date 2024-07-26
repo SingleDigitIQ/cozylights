@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.6",
+	version = "0.2.7",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
@@ -59,6 +59,7 @@ cozylights = {
 	cozy_items = nil,
 	-- dynamic size tables, okay now what about functions
 	cozycids_sunlight_propagates = {},
+	cozycids_light_sources = {},
 	cozyplayers = {},
 	area_queue = {},
 	single_light_queue = {},
@@ -115,7 +116,7 @@ minetest.register_on_mods_loaded(function()
 			-- here we are going to define more specific skips and options for sus light sources
 			local skip = false
 			if string.find(def.name, "everness:") ~= nil and def.groups.vine ~= nil then
-				skip = true -- like goto :continue:
+				skip = true -- like goto continue
 			end
 			if skip == false then
 				local mods = nil
@@ -177,22 +178,11 @@ minetest.register_on_mods_loaded(function()
 							light = def.light_source - 7
 						end
 						minetest.override_item(node,{
-							--tiles = {"test.png"},
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
-							--on_place = function(cozy_itemstack, placer, pointed_thing)
 							on_construct = function(pos)
-								--local nodenameunder = minetest.get_node(pointed_thing.under).name
-								--local nodedefunder = minetest.registered_nodes[nodenameunder]
 								base_on_construct(pos)
-								print(def.name)
 								cozylights:draw_node_light(pos, cozy_items[def.name])
-								--if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
-								--	pointed_thing.above.y = pointed_thing.above.y - 1
-								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
-								--else
-								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[def.name])
-								--end
 							end,
 						})
 					else
@@ -201,21 +191,10 @@ minetest.register_on_mods_loaded(function()
 							light = def.light_source - 7
 						end
 						minetest.override_item(node,{
-							--tiles = {"test.png"},
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
-							--on_place = function(cozy_itemstack, placer, pointed_thing)
 							on_construct = function(pos)
-								--local nodenameunder = minetest.get_node(pointed_thing.under).name
-								--local nodedefunder = minetest.registered_nodes[nodenameunder]
-								print(def.name)
 								cozylights:draw_node_light(pos, cozy_items[def.name])
-								--if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
-								--	pointed_thing.above.y = pointed_thing.above.y - 1
-								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
-								--else
-								--	cozylights:draw_node_light(pointed_thing.above, cozy_items[cozy_itemstack:get_definition().name])
-								--end
 							end,
 						})
 					end
@@ -291,7 +270,6 @@ minetest.register_on_leaveplayer(function(player)
 			table.remove(cozylights.cozyplayers,i)
 		end
 	end
-	
 end)
 
 minetest.register_on_shutdown(function()
@@ -303,7 +281,11 @@ minetest.register_on_shutdown(function()
 	end
 end)
 
+local agent_total = 0
+local agent_count = 0
+local recently_updated = {}
 local function build_lights_after_generated(minp,maxp,sources)
+	local t = os.clock()
 	local vm  = minetest.get_voxel_manip()
 	local emin, emax = vm:read_from_map(vector.subtract(minp, 1), vector.add(maxp, 1))
 	local data = vm:get_data()
@@ -312,24 +294,170 @@ local function build_lights_after_generated(minp,maxp,sources)
 		MinEdge = emin,
 		MaxEdge = emax
 	}
-	for i=1, #sources do
-		cozylights:draw_node_light(sources[i].pos,sources[i].cozy_item,vm,a,data,param2data)
+	if sources then
+		for i=1, #sources do
+			local s = sources[i]
+			--local hash = minetest.hash_node_position(s.pos)
+			local hash = s.pos.x + (s.pos.y)*100 + s.pos.z*10000
+			if recently_updated[hash] == nil then
+				recently_updated[hash] = true
+				cozylights:draw_node_light(s.pos, s.cozy_item, vm, a, data, param2data)
+			end
+		end
+	else
+		local cozycids_light_sources = cozylights.cozycids_light_sources
+		for i in a:iterp(minp,maxp) do
+			local cid = data[i]
+			if cozycids_light_sources[cid] then
+				local cozy_item = cozylights.cozy_items[minetest.get_name_from_content_id(cid)]
+				-- check if radius is not too big
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local p = a:position(i)
+				if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius))
+				then
+					cozylights:draw_node_light(p,cozy_item,vm,a,data,param2data)
+				else
+					table.insert(cozylights.single_light_queue, { pos=p, cozy_item=cozy_item })
+				end
+			end
+		end
 	end
 	cozylights:setVoxelManipData(vm,data,param2data,true)
+	agent_total = agent_total + mf((os.clock() - t) * 1000)
+	agent_count = agent_count + 1
+	print("Av build after generated time: "..
+		mf(agent_total/agent_count).." ms. Sample of: "..agent_count..". Areas left: "..#cozylights.area_queue
+	)
 end
 
 local wield_light_enabled = cozylights.max_wield_light_radius > -1 and true or false
+local step_time = cozylights.step_time
 
 function cozylights:switch_wielded_light(enabled)
 	wield_light_enabled = enabled
 end
 
-local step_time = cozylights.step_time
-
 function cozylights:set_step_time(_time)
 	step_time = _time
 	minetest.settings:set("cozylights_step_time",_time)
 	cozylights.step_time = _time
+end
+
+--idk, size should be smarter than a constant
+local size = 85
+local function place_schem_but_real(pos, schematic, rotation, replacements, force_placement, flags)
+	if tonumber(schematic) ~= nil or type(schematic) == "string" then -- schematic.data
+		cozylights.area_queue[#cozylights.area_queue+1]={
+			minp=vector.subtract(pos, size),
+			maxp=vector.add(pos, size),
+			sources=nil
+		}
+		return
+	end
+	local sd = schematic.data
+	local update_needed = false
+	for i, node in pairs(sd) do
+		-- todo: account for replacements
+		if cozylights.cozy_items[node.name] then
+			-- rotation can be random so we cant know the position
+			-- todo: account for faster cases when its not random
+			update_needed = true
+			break
+		end
+	end
+	if update_needed == true then
+		local cozycids_light_sources = cozylights.cozycids_light_sources
+		print("UPDATE NEEDED")
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size)
+		for i in a:iterp(minp, maxp) do
+			local cid = data[i]
+			if cozycids_light_sources[cid] then
+				local cozy_item = cozylights.cozy_items[minetest.get_name_from_content_id(cid)]
+				-- check if radius is not too big
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local p = a:position(i)
+				if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius))
+				then
+					cozylights:draw_node_light(p,cozy_item,vm,a,data,param2data)
+				else
+					table.insert(cozylights.single_light_queue, { pos=p, cozy_item=cozy_item })
+				end
+			end
+		end
+		cozylights:setVoxelManipData(vm,data,param2data,true)
+	end
+end
+
+--a feeble attempt to cover schematics placements
+local placeschemthatisnotreal = minetest.place_schematic
+--todo: if its a village(several schematics) dont rebuild same lights
+--todo: schematic exception table, if we have discovered for a fact somehow that a particular schematic
+--cant possibly have any kind of lights then we ignore
+--if not in runtime, then a constant table,
+--might require additional tools to load all schematics on contentdb to figure this out
+local schem_queue = {}
+minetest.place_schematic = function(pos, schematic, rotation, replacements, force_placement, flags)
+	if not placeschemthatisnotreal(pos, schematic, rotation, replacements, force_placement, flags) then return end
+	-- now totally real stuff starts to happen
+	schem_queue[#schem_queue+1] = {
+		pos = pos,
+		schematic = schematic,
+		rotation = rotation,
+		replacements = replacements,
+		force_placement = force_placement,
+		flags = flags
+	}
+end
+
+local place_schematic_on_vmanip_nicely = minetest.place_schematic_on_vmanip
+
+minetest.place_schematic_on_vmanip = function(vmanip, minp, filename, rotation, replacements, force_placement,flags)
+	if not place_schematic_on_vmanip_nicely(vmanip, minp, filename, rotation, replacements, force_placement,flags) then return end
+	schem_queue[#schem_queue+1] = {
+		pos = minp,
+		schematic = filename,
+		rotation = rotation,
+		replacements = replacements,
+		force_placement = force_placement,
+		flags = flags
+	}
+end
+
+local createschemthatisveryreadable = minetest.create_schematic
+
+minetest.create_schematic = function(p1, p2, probability_list, filename, slice_prob_list)
+	if not createschemthatisveryreadable(p1, p2, probability_list, filename, slice_prob_list) then return end
+	-- unreadable stuff happens here
+	cozylights.area_queue[#cozylights.area_queue+1] = {
+		minp = p1,
+		maxp = p2,
+		sources = nil
+	}
+end
+
+--minetest.create_schematic(p1, p2, probability_list, filename, slice_prob_list)
+
+
+local function on_brush_hold(player,cozyplayer,pos)
+	local control_bits = player:get_player_control_bits()
+	if control_bits < 128 or control_bits >= 256 then return end
+	local lb = cozyplayer.lbrush
+	if lb.radius > 30 then return end
+	local look_dir = player:get_look_dir()
+	local endpos = vector.add(pos, vector.multiply(look_dir, 100))
+	local hit = minetest.raycast(pos, endpos, false, false):next()
+	if not hit then return end
+	local nodenameunder = minetest.get_node(hit.under).name
+	local nodedefunder = minetest.registered_nodes[nodenameunder]
+	local above = hit.above
+	if nodedefunder.buildable_to == true then
+		above.y = above.y - 1
+	end
+	local above_hash = above.x + (above.y)*100 + above.z*10000
+	if above_hash ~= lb.pos_hash or lb.mode == 2 or lb.mode == 4 or lb.mode == 5 then
+		lb.pos_hash = above_hash
+		cozylights:draw_brush_light(above, lb)
+	end
 end
 
 local light_build_time = 0
@@ -338,15 +466,23 @@ minetest.register_globalstep(function(dtime)
 	if total_dtime > step_time then
 		total_dtime = 0
 		light_build_time = light_build_time + step_time
-		if light_build_time > step_time*2 then
+		if light_build_time > step_time*5 then
 			light_build_time = 0
+			if #schem_queue > 0 then
+				local s = schem_queue[1]
+				place_schem_but_real(s.pos, s.schematic, s.rotation, s.replacements, s.force_placement, s.flags)
+				table.remove(schem_queue, 1)
+			end
 			if #cozylights.area_queue ~= 0 then
 				local ar = cozylights.area_queue[1]
 				table.remove(cozylights.area_queue, 1)
-				print("build_lights_after_generated")
+				print("build_lights_after_generated: "..cozylights:dump(ar.minp))
 				build_lights_after_generated(ar.minp,ar.maxp,ar.sources)
 			else
 				cozylights:rebuild_light()
+				if #recently_updated > 0 then
+					recently_updated = {}
+				end
 			end
 		end
 		local t = os.clock()
@@ -357,138 +493,103 @@ minetest.register_globalstep(function(dtime)
 			local wield_name = player:get_wielded_item():get_name()
 			--todo: checking against a string is expensive, what do
 			if wield_name == "cozylights:light_brush" then
-				local control_bits = player:get_player_control_bits()
-				if control_bits >= 128 and control_bits < 256 then
-					local lb = cozyplayer.lbrush
-					if lb.radius < 31 then
-						local look_dir = player:get_look_dir()
-						local endpos = vector.add(pos, vector.multiply(look_dir, 100))
-						local hit = minetest.raycast(pos, endpos, false, false):next()
-						if hit then
-							local nodenameunder = minetest.get_node(hit.under).name
-							local nodedefunder = minetest.registered_nodes[nodenameunder]
-							local above = hit.above
-							if nodedefunder.buildable_to == true then
-								above.y = above.y - 1
-							end
-							local above_hash = above.x + (above.y)*100 + above.z*10000
-							if lb.mode == 2 or lb.mode == 4 or lb.mode == 5 or above_hash ~= lb.pos_hash then
-								lb.pos_hash = above_hash
-								cozylights:draw_brush_light(above, lb)
-							end
-						end
-					end
-				end
+				on_brush_hold(player,cozyplayer,pos)
 			end
-			if wield_light_enabled == true then
-				-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
-				-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
-				local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
-				if pos_hash ~= cozyplayer.pos_hash or cozyplayer.last_wield ~= wield_name then
-					if cozylights.cozy_items[wield_name] ~= nil then
-						local vel = vector.round(vector.multiply(player:get_velocity(),step_time))
-						cozylights:draw_wielded_light(
-							pos,
-							cozyplayer.last_pos,
-							cozylights.cozy_items[wield_name],
-							vel,
-							cozyplayer
-						)
-					else
-						cozylights:wielded_light_cleanup(player,cozyplayer,cozyplayer.last_wield_radius or 0)
-					end
-					cozyplayer.pos_hash = pos_hash
-					cozyplayer.last_pos = pos
-					cozyplayer.last_wield = wield_name
-					total_step_time = total_step_time + mf((os.clock() - t) * 1000)
-					total_step_count = total_step_count + 1
-					--print("Average wielded cozy light step time " .. mf(total_step_time/total_step_count) .. " ms. Sample of: "..total_step_count)
-				end
+
+			if wield_light_enabled == false then
+				goto next_player
 			end
+			-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
+			-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
+			local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
+			if pos_hash == cozyplayer.pos_hash and cozyplayer.last_wield == wield_name then
+				goto next_player
+			end
+			if cozylights.cozy_items[wield_name] ~= nil then
+				local vel = vector.round(vector.multiply(player:get_velocity(),step_time))
+				cozylights:draw_wielded_light(
+					pos,
+					cozyplayer.last_pos,
+					cozylights.cozy_items[wield_name],
+					vel,
+					cozyplayer
+				)
+			else
+				cozylights:wielded_light_cleanup(player,cozyplayer,cozyplayer.last_wield_radius or 0)
+			end
+			cozyplayer.pos_hash = pos_hash
+			cozyplayer.last_pos = pos
+			cozyplayer.last_wield = wield_name
+			total_step_time = total_step_time + mf((os.clock() - t) * 1000)
+			total_step_count = total_step_count + 1
+			--print("Av wielded cozy light step time " .. mf(total_step_time/total_step_count) .. " ms. Sample of: "..total_step_count)
+			::next_player::
 		end
 	end
 end)
 
 local gent_total = 0
 local gent_count = 0
-
-minetest.register_on_generated(function(minp, maxp, seed)
+minetest.register_on_generated(function(minp, maxp)
 	local pos = vector.add(minp, vector.floor(vector.divide(vector.subtract(maxp,minp), 2)))
 	local light_sources = minetest.find_nodes_in_area(minp,maxp,cozylights.source_nodes)
-	if #light_sources == 0 or #light_sources > 2000 then
+	if #light_sources == 0 then return end
+	if #light_sources > 1000 then
 		print("Error: too many light sources around "..cozylights:dump(pos).." Report this to Cozy Lights dev")
 		return
 	end
-	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
-	local t = os.clock()
+	--local minp_exp,maxp_exp,_,data,_,a = cozylights:getVoxelManipData(pos, size)
+	--local t = os.clock()
 	local sources = {}
-	local minp_exp,maxp_exp = minp, maxp
-	local a = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
-	local data = vm:get_data()
+	local a = VoxelArea:new{
+		MinEdge = minp,
+		MaxEdge = maxp
+	}
+	local minp_exp, maxp_exp = minp, maxp
 	for _, p in pairs(light_sources) do
-	--for i in a:iterp(minp, maxp) do
-		local i = a:indexp(p)
-		local cid = data[i]
-		if cozylights.cozycids_light_sources[cid] == true then
-			local name = minetest.get_name_from_content_id(cid)
-			local cozy_item = cozylights.cozy_items[name]
-			--local pos = a:position(i)
-			local radius, _ = cozylights:calc_dims(cozy_item)
-			print(name)
-			if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius)) then
-				print("adding "..name.." to area_queue")
-				sources[#sources+1] = {
-					--pos=pos,
-					pos=p,
-					cozy_item=cozy_item
-				}
-			else
-				-- expand area
-				local rel_p = vector.subtract(p,pos)
-				local rel_minp = vector.subtract(minp_exp,pos)
-				local rel_maxp = vector.subtract(maxp_exp,pos)
-				local source_minp = vector.subtract(rel_p,radius)
-				local source_maxp = vector.add(rel_p,radius)
-				local minp_dif = vector.subtract(rel_minp, source_minp)
-				local required_radius = minp_dif.x > minp_dif.y and minp_dif.x or minp_dif.y
-				required_radius = minp_dif.z > required_radius and minp_dif.z or required_radius
-				local maxp_dif = vector.subtract(rel_maxp, source_maxp)
-				required_radius = maxp_dif.x > required_radius and maxp_dif.x or required_radius
-				required_radius = maxp_dif.y > required_radius and maxp_dif.y or required_radius
-				required_radius = maxp_dif.z > required_radius and maxp_dif.z or required_radius
-				minp_exp,maxp_exp,_,data,_,a = cozylights:getVoxelManipData(pos, required_radius)
-				--local origin = a:position(i)
-				sources[#sources+1] = {
-					--pos=pos,
-					pos=p,
-					cozy_item=cozy_item
-				}
-				--if #cozylights.single_light_queue > 0 then
-				--	local prev_source = cozylights.single_light_queue[#cozylights.single_light_queue]
-				--	local radius, _ = cozylights:calc_dims(prev_source.cozy_item)
-				--	local possible_area_min = vector.subtract(pos,radius)
-				--	local possible_area_max = vector.add(pos,radius)
-				--else
-					--print("adding "..name.." to single_light_queue")
-					--table.insert(cozylights.single_light_queue, {
-					--	pos=origin,
-					--	cozy_item=cozy_item
-					--})
-				--end
-			end
+		local name = minetest.get_node(p).name--get_name_from_content_id(cid)
+		local cozy_item = cozylights.cozy_items[name]
+		local radius, _ = cozylights:calc_dims(cozy_item)
+		local min_rad = vector.subtract(p,radius)
+		local max_rad = vector.add(p,radius)
+		if a:containsp(min_rad) and a:containsp(max_rad) then
+			sources[#sources+1] = {
+				pos=p,
+				cozy_item=cozy_item
+			}
+		else
+			minp_exp = {
+				x = minp_exp.x > min_rad.x and min_rad.x or minp_exp.x,
+				y = minp_exp.y > min_rad.y and min_rad.y or minp_exp.y,
+				z = minp_exp.z > min_rad.z and min_rad.z or minp_exp.z,
+			}
+			maxp_exp = {
+				x = maxp_exp.x < max_rad.x and max_rad.x or maxp_exp.x,
+				y = maxp_exp.y < max_rad.y and max_rad.y or maxp_exp.y,
+				z = maxp_exp.z < max_rad.z and max_rad.z or maxp_exp.z,
+			}
+
+			a = VoxelArea:new{
+				MinEdge = minp_exp,
+				MaxEdge = maxp_exp
+			}
+			--print("adding "..name.." to single_light_queue")
+			--table.insert(cozylights.single_light_queue, {
+			--	pos=p,
+			--	cozy_item=cozy_item
+			--})
 		end
 	end
-	--cozylights:setVoxelManipData(vm,data,param2data,true)
-	gent_total = gent_total + mf((os.clock() - t) * 1000)
-	gent_count = gent_count + 1
-	print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	--gent_total = gent_total + mf((os.clock() - t) * 1000)
+	--gent_count = gent_count + 1
+	--print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 	if #sources > 0 then
+		print("on_generated adding area:"..cozylights:dump({minp=minp_exp,maxp=maxp_exp, volume=a:getVolume()}))
 		cozylights.area_queue[#cozylights.area_queue+1]={
-			--minp=vector.subtract(minp,39),
-			--maxp=vector.add(maxp,39),
 			minp=minp_exp,
 			maxp=maxp_exp,
 			sources=sources
 		}
 	end
 end)
+

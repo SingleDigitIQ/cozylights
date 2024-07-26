@@ -36,9 +36,9 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data,fix_edges
 	local t = os.clock()
 	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(cozy_item)
-	print("cozy_item:"..cozylights:dump(cozy_item))
-	print("dim_levels: "..cozylights:dump(dim_levels))
-	print("spreading light over a sphere with radius of "..radius)
+	--print("cozy_item:"..cozylights:dump(cozy_item))
+	--print("dim_levels: "..cozylights:dump(dim_levels))
+	--print("spreading light over a sphere with radius of "..radius)
 	if vm == nil then
 		_,_,vm,data,param2data,a = cozylights:getVoxelManipData(pos,radius)
 		update_needed = 1
@@ -88,7 +88,6 @@ function cozylights:rebuild_light()
 	print("#single_light_queue is: "..#single_light_queue)
 	cozylights:draw_node_light(single_light_queue[1].pos, single_light_queue[1].cozy_item)
 	table.remove(single_light_queue, 1)
-
 end
 
 function cozylights:destroy_light(pos, cozy_item)
