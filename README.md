@@ -115,15 +115,17 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- fix weird artifacts i can see only in mineclone, assuming its probably because mineclone generates some stuff like structures with a delay, and therefore original terrain looks a lot different to final result, and cozy lights most likely act based on original rather than final
+- make sure bigger lights wont go unnoticed in on_generated and schematic placement
+
+- sometimes required_radius is negative in on_generated
 
 - fix nodecore dynamic light source not updating the brightness/radius
 
-- fix mineclone structures not getting lit on generated, apparently the issue is about schematics, cozy lights for some reason cant react to mineclone placed schematics, its either they are placed with a delay or its normal behavior for schematics which are not placed as decorations or with a vmanip, either way, it's a bigger issue not just mineclone' issue
-
-- during generation sometimes lights are not fully generated. possibly need to force emerge/load(if that is even possible), and maybe check for a:containsp
+- during generation sometimes lights are not fully generated. possibly need to force emerge/load(if that is even possible), in the worst case scenario maybe check for a:containsp, even though that is expensive
 
 - add privileges so schematics can be used on multiplayer server
+
+- all queues should be saved in case of server shutdown, so they can be resumed
 
 - make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
 
@@ -211,11 +213,11 @@ TLDR: LuaJIT is certainly impressive in some parts, however I would rather refra
 
 9. You can obviously somewhat control cache with local variables, but there is a catch, it only gives somewhat coherent performance results if the loop is very simple.
 
-10. LuaJIT can crash during trying to allocate too much memory in one go as if it's in the earliest dev stage and not ready for prod. JS V8 maybe leaks, but at least does not crash just like that.
+10. Apparently of memory allocation being complex in LuaJIT, it can crash during trying to allocate too much memory in one go as if it's in the earliest dev stage and not ready for prod. JS V8 maybe leaks, but at least does not crash just like that.
 
 ## LICENSE
 
-MIT for my code, will appreciate reasonable attribution
+MIT+(you are not legally allowed to infect it with GPL, AGPL or EUPL) for my code, will appreciate reasonable attribution
 
 And there is a texture from MTG, which will be eventually replaced:
 

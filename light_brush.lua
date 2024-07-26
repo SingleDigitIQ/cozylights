@@ -170,7 +170,7 @@ local function draw_one_node(pos,lb)
 	if brightness == 0 then
 		new_node_name = "air"
 	end
-	print(node.name)
+
 	if node.name == "air" and new_node_name ~= node.name then
 		minetest.set_node(
 			pos,

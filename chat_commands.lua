@@ -50,7 +50,6 @@ local rebuildlights = {
 			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
 			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
 				then
-					print(node_name)
 					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data)
 				else
 					local single_light_queue = cozylights.single_light_queue
@@ -84,7 +83,6 @@ local fixedges = {
 			 	if vector.in_area(vector.subtract(posrebuild, radius), minp, maxp)
 			 		and vector.in_area(vector.add(posrebuild, radius), minp, maxp)
 				then
-					print(node_name)
 					cozylights:draw_node_light(posrebuild, cozy_item, vm, a, data, param2data, true)
 				else
 					local single_light_queue = cozylights.single_light_queue

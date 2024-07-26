@@ -59,6 +59,7 @@ cozylights = {
 	cozy_items = nil,
 	-- dynamic size tables, okay now what about functions
 	cozycids_sunlight_propagates = {},
+	cozycids_light_sources = {},
 	cozyplayers = {},
 	area_queue = {},
 	single_light_queue = {},
@@ -185,7 +186,7 @@ minetest.register_on_mods_loaded(function()
 								--local nodenameunder = minetest.get_node(pointed_thing.under).name
 								--local nodedefunder = minetest.registered_nodes[nodenameunder]
 								base_on_construct(pos)
-								print(def.name)
+								--print(def.name)
 								cozylights:draw_node_light(pos, cozy_items[def.name])
 								--if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 								--	pointed_thing.above.y = pointed_thing.above.y - 1
@@ -208,7 +209,7 @@ minetest.register_on_mods_loaded(function()
 							on_construct = function(pos)
 								--local nodenameunder = minetest.get_node(pointed_thing.under).name
 								--local nodedefunder = minetest.registered_nodes[nodenameunder]
-								print(def.name)
+								--print(def.name)
 								cozylights:draw_node_light(pos, cozy_items[def.name])
 								--if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 								--	pointed_thing.above.y = pointed_thing.above.y - 1
@@ -312,8 +313,27 @@ local function build_lights_after_generated(minp,maxp,sources)
 		MinEdge = emin,
 		MaxEdge = emax
 	}
-	for i=1, #sources do
-		cozylights:draw_node_light(sources[i].pos,sources[i].cozy_item,vm,a,data,param2data)
+	if sources then
+		for i=1, #sources do
+			cozylights:draw_node_light(sources[i].pos,sources[i].cozy_item,vm,a,data,param2data)
+		end
+	else
+		local cozycids_light_sources = cozylights.cozycids_light_sources
+		for i in a:iterp(minp,maxp) do
+			local cid = data[i]
+			if cozycids_light_sources[cid] then
+				local cozy_item = cozylights.cozy_items[minetest.get_name_from_content_id(cid)]
+				-- check if radius is not too big
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local p = a:position(i)
+				if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius))
+				then
+					cozylights:draw_node_light(p,cozy_item,vm,a,data,param2data)
+				else
+					table.insert(cozylights.single_light_queue, { pos=p, cozy_item=cozy_item })
+				end
+			end
+		end
 	end
 	cozylights:setVoxelManipData(vm,data,param2data,true)
 end
@@ -332,18 +352,93 @@ function cozylights:set_step_time(_time)
 	cozylights.step_time = _time
 end
 
+
+local gent_total = 0
+local gent_count = 0
+--idk, size should be smarter than a constant
+local size = 100
+local function place_schem_but_real(pos, schematic, rotation, replacements, force_placement, flags)
+	local sd = schematic.data
+	if not sd then
+		--print("SCHEMATIC PATH: "..cozylights:dump(schematic))
+		cozylights.area_queue[#cozylights.area_queue+1]={
+			minp=vector.subtract(pos, size),
+			maxp=vector.add(pos, size),
+			sources=nil
+		}
+		return
+	end
+	local update_needed = false
+	for i, node in pairs(sd) do
+		-- todo: account for replacements
+		if cozylights.cozy_items[node.name] then
+			-- rotation can be random so we cant know the position
+			-- todo: account for faster cases when its not random
+			update_needed = true
+			break
+		end
+	end
+	if update_needed == true then
+		local cozycids_light_sources = cozylights.cozycids_light_sources
+		print("UPDATE NEEDED")
+		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos, size)
+		for i in a:iterp(minp, maxp) do
+			local cid = data[i]
+			if cozycids_light_sources[cid] then
+				local cozy_item = cozylights.cozy_items[minetest.get_name_from_content_id(cid)]
+				-- check if radius is not too big
+				local radius, _ = cozylights:calc_dims(cozy_item)
+				local p = a:position(i)
+				if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius))
+				then
+					cozylights:draw_node_light(p,cozy_item,vm,a,data,param2data)
+				else
+					table.insert(cozylights.single_light_queue, { pos=p, cozy_item=cozy_item })
+				end
+			end
+		end
+		cozylights:setVoxelManipData(vm,data,param2data,true)
+	end
+end
+
+--a feeble attempt to cover schematics placements
+local placeschemthatisnotreal = minetest.place_schematic
+local schem_queue = {}
+--todo: if its a village(several schematics) dont rebuild same lights
+--todo: schematic exception table, if we have discovered for a fact somehow that a particular schematic
+--cant possibly have any kind of lights then we ignore
+--if not in runtime, then a constant table,
+--might require additional tools to load all schematics on contentdb to figure this out
+minetest.place_schematic = function(pos, schematic, rotation, replacements, force_placement, flags)
+	if not placeschemthatisnotreal(pos, schematic, rotation, replacements, force_placement, flags) then return end
+	-- now totally real stuff starts to happen
+	schem_queue[#schem_queue+1] = {
+		pos = pos,
+		schematic = schematic,
+		rotation = rotation,
+		replacements = replacements,
+		force_placement = force_placement,
+		flags = flags
+	}
+end
+
 local light_build_time = 0
 minetest.register_globalstep(function(dtime)
 	total_dtime = total_dtime + dtime
 	if total_dtime > step_time then
 		total_dtime = 0
 		light_build_time = light_build_time + step_time
-		if light_build_time > step_time*2 then
+		if light_build_time > step_time*4 then
 			light_build_time = 0
+			if #schem_queue > 0 then
+				local s = schem_queue[1]
+				place_schem_but_real(s.pos, s.schematic, s.rotation, s.replacements, s.force_placement, s.flags)
+				table.remove(schem_queue, 1)
+			end
 			if #cozylights.area_queue ~= 0 then
 				local ar = cozylights.area_queue[1]
 				table.remove(cozylights.area_queue, 1)
-				print("build_lights_after_generated")
+				print("build_lights_after_generated: "..cozylights:dump(ar.minp))
 				build_lights_after_generated(ar.minp,ar.maxp,ar.sources)
 			else
 				cozylights:rebuild_light()
@@ -409,15 +504,14 @@ minetest.register_globalstep(function(dtime)
 	end
 end)
 
-local gent_total = 0
-local gent_count = 0
-
 minetest.register_on_generated(function(minp, maxp, seed)
+	--generated_area_queue[#generated_area_queue+1] = {minp=minp,maxp=maxp}
 	local pos = vector.add(minp, vector.floor(vector.divide(vector.subtract(maxp,minp), 2)))
 	local light_sources = minetest.find_nodes_in_area(minp,maxp,cozylights.source_nodes)
-	if #light_sources == 0 or #light_sources > 2000 then
+	if #light_sources == 0 then return end
+	if #light_sources > 2000 then
 		print("Error: too many light sources around "..cozylights:dump(pos).." Report this to Cozy Lights dev")
-		return
+		--return
 	end
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local t = os.clock()
@@ -434,7 +528,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			local cozy_item = cozylights.cozy_items[name]
 			--local pos = a:position(i)
 			local radius, _ = cozylights:calc_dims(cozy_item)
-			print(name)
 			if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius)) then
 				print("adding "..name.." to area_queue")
 				sources[#sources+1] = {
@@ -444,6 +537,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				}
 			else
 				-- expand area
+				-- todo: check whats with negative radius
 				local rel_p = vector.subtract(p,pos)
 				local rel_minp = vector.subtract(minp_exp,pos)
 				local rel_maxp = vector.subtract(maxp_exp,pos)
@@ -457,12 +551,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				required_radius = maxp_dif.y > required_radius and maxp_dif.y or required_radius
 				required_radius = maxp_dif.z > required_radius and maxp_dif.z or required_radius
 				minp_exp,maxp_exp,_,data,_,a = cozylights:getVoxelManipData(pos, required_radius)
-				--local origin = a:position(i)
-				sources[#sources+1] = {
-					--pos=pos,
-					pos=p,
-					cozy_item=cozy_item
-				}
+				sources[#sources+1] = {	pos=p, cozy_item=cozy_item }
 				--if #cozylights.single_light_queue > 0 then
 				--	local prev_source = cozylights.single_light_queue[#cozylights.single_light_queue]
 				--	local radius, _ = cozylights:calc_dims(prev_source.cozy_item)
@@ -483,12 +572,12 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	gent_count = gent_count + 1
 	print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 	if #sources > 0 then
+		print("on_generated adding area:"..cozylights:dump({minp=minp_exp,maxp=maxp_exp}))
 		cozylights.area_queue[#cozylights.area_queue+1]={
-			--minp=vector.subtract(minp,39),
-			--maxp=vector.add(maxp,39),
 			minp=minp_exp,
 			maxp=maxp_exp,
 			sources=sources
 		}
 	end
 end)
+
