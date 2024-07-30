@@ -111,15 +111,15 @@ function cozylights:set_wielded_light_radius(_radius)
 	cozylights.max_wield_light_radius = _radius
 end
 
-ffi.cdef([[
-typedef struct {float x, y, z;} v3float;
-typedef struct {int16_t x, y, z;} v3;
-typedef struct {uint16_t* data; uint8_t* param2data;} vm_data;
-vm_data l_ttt(
-	v3* sphere_surface, int sphere_surface_length, v3 pos, v3 minp, v3 maxp, uint16_t radius, uint16_t* data, uint8_t* param2data,
-	uint8_t* dim_levels, bool* cozycids_sunlight, int c_air, uint16_t* c_lights
-);
-]])
+--ffi.cdef([[
+--typedef struct {float x, y, z;} v3float;
+--typedef struct {int16_t x, y, z;} v3;
+--typedef struct {uint16_t* data; uint8_t* param2data;} vm_data;
+--vm_data l_ttt(
+--	v3* sphere_surface, int sphere_surface_length, v3 pos, v3 minp, v3 maxp, uint16_t radius, uint16_t* data, uint8_t* param2data,
+--	uint8_t* dim_levels, bool* cozycids_sunlight, int c_air, uint16_t* c_lights
+--);
+--]])
 --local ctest = ffi.load(cozylights.modpath.."/liblight.so")
 
 function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,vm,a,data,param2data,emin,emax)
@@ -209,7 +209,8 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	end
 	local zstride, ystride = a.zstride, a.ystride
 	local dirs = { -1*ystride, 1*ystride,-1,1,-1*zstride,1*zstride}
-	--[[--cdata experiments, so if we offload heavy lifting on c, it will actually be 20% slower
+	--[[--cdata experiments, so if we offload heavy lifting on c, it will actually be slower by 20%
+		--not even a bit faster, so i d rather not continue on this
 		--because vm:set_data works with lua state and expects lua table,
 		--and interpreting c types back to lua table seems to be ridiculously expensive to bother
 		--basically lua is useless and helpless without lua state

@@ -26,7 +26,7 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 ## Known issues
 
-1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. There can be other invisible nodes from some mods and games which would interfere with light map.
+1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. This issue also involves cozy wielded light, wordedit placeholders can appear anywhere if the mod is active. There can be other invisible nodes from some mods and games which would interfere with light map.
 
 2. You will have to disable K Ambient Light to use Cozy Lights, together, they are not recommended for now.
 
@@ -129,35 +129,39 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- and also a question, is it possible to have trees grow within the radius of a light block like torches
+- is it possible to have trees grow within the radius of a light block like torches
 
-- add fluid step time option, adjusts when step time is too low for given hardware
+- add undo
 
-- add /uncozymode and /cozymode
+- figure out what to do about lights going through diagonal, one node thick walls. also still somehow manage to keep algo cheap
+
+- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
+
+- see what can be done with race condition of wielded light and node light
+
+- save brush settings in item metadata and change icon somehow to resemble the settings
 
 - add /disableongen
 
-- add /ignore
+- all queues should be saved in case of server shutdown, so they can be resumed
+
+- add /ignore certain block
 
 - algo for many adjacent lights
 
 - see what can be done about snow and slabs not passing the light through
 
-- make step autoadjust if something is too slow for user hardware, maybe also add setting for that
+- make dropped items emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - make sure bigger lights wont go unnoticed in on_generated and schematic placement. apparnetly on generated can support lights up to 80 if max area radius is 120
-
-- fix nodecore dynamic light source not updating the brightness/radius
-
-- add privileges so schematics can be used on multiplayer server
-
-- all queues should be saved in case of server shutdown, so they can be resumed
-
-- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
 - illuminate transparent liquids too if possible without making it look weird, except dont make floodable light sources work underwater just like in original wielded light
+
+- fix nodecore dynamic light source not updating the brightness/radius
+
+- add privileges so schematics can be used on multiplayer server
 
 - parse minetest forum for optional_depends
 
@@ -175,8 +179,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - would it be possible without too much work to programatically determine global commonality of a node from mapgen?
 
-- add undo
-
 - add optional more pleasant day/night cycle
 
 - add optional sky textures
@@ -186,10 +188,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - move to base "unsafe" methods for tables? seems like luajit optimizes it all away and it's useless to bother?
 
 - try spread work over several loops and try vector.add
-
-- figure out what to do about lights going through diagonal, one node thick walls. also still somehow manage to keep algo cheap
-
-- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
 
 - maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
 

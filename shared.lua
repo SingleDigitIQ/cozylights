@@ -3,8 +3,29 @@ local c_light1 = minetest.get_content_id("cozylights:light1")
 local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 + 4, c_light1 + 5, c_light1 + 6,
 c_light1 + 7, c_light1 + 8, c_light1 + 9, c_light1 + 10, c_light1 + 11, c_light1 + 12, c_light1 + 13 }
 local c_light14 = c_lights[14]
+local c_light_debug1 = c_light14 + 1
+local c_light_debug14 = c_light_debug1 + 13
 local c_air = minetest.get_content_id("air")
 local mf = math.floor
+
+function cozylights:clear(pos,size)
+	local t = os.clock()
+	local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
+	local count = 0
+	for i in a:iterp(minp, maxp) do
+		local cid = data[i]
+		if cid >= c_light1 and cid <= c_light_debug14 then
+			data[i] = c_air
+			param2data[i] = 0
+			count = count + 1
+		end
+	end
+	minetest.chat_send_all("cleared "..count.." cozy light nodes in area around pos: "..cozylights:dump(pos).." of radius: "..size)
+	if count> 0 then
+		cozylights:setVoxelManipData(vm,data,param2data,true)
+	end
+	return (os.clock() - t)
+end
 
 function cozylights:getVoxelManipData(pos, size)
 	local minp = vector.subtract(pos, size)
