@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.7",
+	version = "0.2.8",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
@@ -8,7 +8,7 @@ cozylights = {
 	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.01,
 	brush_hold_step = tonumber(minetest.settings:get("cozylights_brush_hold_step")) or 0.07,
 	on_gen_step = tonumber(minetest.settings:get("cozylights_on_gen_step")) or 0.7,
-	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 12,
+	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 17,
 	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
 	uncozy_mode = tonumber(minetest.settings:get("cozylights_uncozy_mode")) or 0,
@@ -83,6 +83,24 @@ dofile(modpath.."/helpers.lua")
 if cozylights:mod_loaded("br_core") then
 	cozylights.brightness_factor = cozylights.brightness_factor - 6
 end
+
+--if cozylights:mod_loaded("default") then
+--	default.can_grow = function(pos)
+--		local node_under = minetest.get_node_or_nil({x = pos.x, y = pos.y - 1, z = pos.z})
+--		if not node_under then
+--			return false
+--		end
+--		if minetest.get_item_group(node_under.name, "soil") == 0 then
+--			return false
+--		end
+--		local light_level = minetest.get_node_light(pos)
+--		if not light_level or light_level < 13 then
+--			return false
+--		end
+--		return true
+--	end
+--end
+
 
 dofile(modpath.."/nodes.lua")
 dofile(modpath.."/shared.lua")
@@ -526,6 +544,7 @@ minetest.register_globalstep(function(dtime)
 				total_wield_step_count = total_wield_step_count + 1
 				print("Av wielded cozy light step time " .. mf(total_wield_time/total_wield_step_count) .. " ms. Sample of: "..total_wield_step_count)
 				if cozylights.crispy_potato and exe_time > wield_step then
+					cozylights:set_wielded_light_radius(cozylights.max_wield_light_radius - 1)
 					minetest.chat_send_all("wield light step was adjusted to "..(exe_time*2).." secs to help crispy potato.")
 					wield_step = exe_time*2
 				end
