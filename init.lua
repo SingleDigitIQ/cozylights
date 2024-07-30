@@ -1,14 +1,18 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.7",
+	version = "0.2.8",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
-	step_time = tonumber(minetest.settings:get("cozylights_step_time")) or 0.1,
-	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 19,
+	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.01,
+	brush_hold_step = tonumber(minetest.settings:get("cozylights_brush_hold_step")) or 0.07,
+	on_gen_step = tonumber(minetest.settings:get("cozylights_on_gen_step")) or 0.7,
+	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 17,
 	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
+	uncozy_mode = tonumber(minetest.settings:get("cozylights_uncozy_mode")) or 0,
+	crispy_potato = minetest.settings:get_bool("cozylights_crispy_potato", true),
 	-- this is a table of modifiers for global light source settings.
 	-- lowkeylike and dimlike usually assigned to decorations in hopes to make all ambient naturally occuring light sources weaker
 	-- this is for two reasons:
@@ -63,11 +67,8 @@ cozylights = {
 	cozyplayers = {},
 	area_queue = {},
 	single_light_queue = {},
+	modpath = minetest.get_modpath(minetest.get_current_modname())
 }
-
-local total_dtime = 0
-local total_step_time = 0
-local total_step_count = 0
 
 local modpath = minetest.get_modpath(minetest.get_current_modname())
 dofile(modpath.."/helpers.lua")
@@ -83,9 +84,28 @@ if cozylights:mod_loaded("br_core") then
 	cozylights.brightness_factor = cozylights.brightness_factor - 6
 end
 
+--if cozylights:mod_loaded("default") then
+--	default.can_grow = function(pos)
+--		local node_under = minetest.get_node_or_nil({x = pos.x, y = pos.y - 1, z = pos.z})
+--		if not node_under then
+--			return false
+--		end
+--		if minetest.get_item_group(node_under.name, "soil") == 0 then
+--			return false
+--		end
+--		local light_level = minetest.get_node_light(pos)
+--		if not light_level or light_level < 13 then
+--			return false
+--		end
+--		return true
+--	end
+--end
+
+
 dofile(modpath.."/nodes.lua")
 dofile(modpath.."/shared.lua")
 dofile(modpath.."/chat_commands.lua")
+--ffi = require("ffi")
 dofile(modpath.."/wield_light.lua")
 dofile(modpath.."/node_light.lua")
 dofile(modpath.."/light_brush.lua")
@@ -251,7 +271,7 @@ minetest.register_on_joinplayer(function(player)
 		last_wield="",
 		prev_wielded_lights={},
 		lbrush={
-			brightness=14,
+			brightness=6,
 			radius=0,
 			strength=0.5,
 			mode=1,
@@ -330,19 +350,6 @@ local function build_lights_after_generated(minp,maxp,sources)
 	)
 end
 
-local wield_light_enabled = cozylights.max_wield_light_radius > -1 and true or false
-local step_time = cozylights.step_time
-
-function cozylights:switch_wielded_light(enabled)
-	wield_light_enabled = enabled
-end
-
-function cozylights:set_step_time(_time)
-	step_time = _time
-	minetest.settings:set("cozylights_step_time",_time)
-	cozylights.step_time = _time
-end
-
 --idk, size should be smarter than a constant
 local size = 85
 local function place_schem_but_real(pos, schematic, rotation, replacements, force_placement, flags)
@@ -410,7 +417,6 @@ minetest.place_schematic = function(pos, schematic, rotation, replacements, forc
 end
 
 local place_schematic_on_vmanip_nicely = minetest.place_schematic_on_vmanip
-
 minetest.place_schematic_on_vmanip = function(vmanip, minp, filename, rotation, replacements, force_placement,flags)
 	if not place_schematic_on_vmanip_nicely(vmanip, minp, filename, rotation, replacements, force_placement,flags) then return end
 	schem_queue[#schem_queue+1] = {
@@ -424,7 +430,6 @@ minetest.place_schematic_on_vmanip = function(vmanip, minp, filename, rotation, 
 end
 
 local createschemthatisveryreadable = minetest.create_schematic
-
 minetest.create_schematic = function(p1, p2, probability_list, filename, slice_prob_list)
 	if not createschemthatisveryreadable(p1, p2, probability_list, filename, slice_prob_list) then return end
 	-- unreadable stuff happens here
@@ -435,14 +440,48 @@ minetest.create_schematic = function(p1, p2, probability_list, filename, slice_p
 	}
 end
 
---minetest.create_schematic(p1, p2, probability_list, filename, slice_prob_list)
+local wield_light_enabled = cozylights.max_wield_light_radius > -1 and true or false
+local wield_step = cozylights.wield_step
+local brush_hold_step = cozylights.brush_hold_step
+local on_gen_step = cozylights.on_gen_step
 
+function cozylights:switch_wielded_light(enabled)
+	wield_light_enabled = enabled
+end
 
-local function on_brush_hold(player,cozyplayer,pos)
+function cozylights:set_wield_step(_time)
+	wield_step = _time
+	minetest.settings:set("cozylights_wield_step",_time)
+	cozylights.wield_step = _time
+end
+
+function cozylights:set_brush_hold_step(_time)
+	brush_hold_step = _time
+	minetest.settings:set("cozylights_brush_hold_step",_time)
+	cozylights.brush_hold_step = _time
+end
+
+function cozylights:set_on_gen_step(_time)
+	on_gen_step = _time
+	minetest.settings:set("cozylights_on_gen_step",_time)
+	cozylights.on_gen_step = _time
+end
+
+local brush_hold_dtime = 0
+local wield_dtime = 0
+local on_gen_dtime = 0
+
+local total_brush_hold_time = 0
+local total_brush_hold_step_count = 0
+local total_wield_time = 0
+local total_wield_step_count = 0
+local uncozy_queue = {}
+
+local function on_brush_hold(player,cozyplayer,pos,t)
 	local control_bits = player:get_player_control_bits()
 	if control_bits < 128 or control_bits >= 256 then return end
 	local lb = cozyplayer.lbrush
-	if lb.radius > 30 then return end
+	if lb.radius > 10 then return end
 	local look_dir = player:get_look_dir()
 	local endpos = vector.add(pos, vector.multiply(look_dir, 100))
 	local hit = minetest.raycast(pos, endpos, false, false):next()
@@ -457,17 +496,83 @@ local function on_brush_hold(player,cozyplayer,pos)
 	if above_hash ~= lb.pos_hash or lb.mode == 2 or lb.mode == 4 or lb.mode == 5 then
 		lb.pos_hash = above_hash
 		cozylights:draw_brush_light(above, lb)
+		local exe_time = os.clock() - t
+		total_brush_hold_time = total_brush_hold_time + mf(exe_time * 1000)
+		total_brush_hold_step_count = total_brush_hold_step_count + 1
+		print("Av cozy lights brush step time " .. mf(total_brush_hold_time/total_brush_hold_step_count) .. " ms. Sample of: "..total_brush_hold_step_count)
+		--if exe_time > brush_hold_step then
+		--	minetest.chat_send_all("brush hold step was adjusted to "..(exe_time*2).." secs to help crispy potato.")
+		--	brush_hold_step = exe_time*2
+		--end
 	end
 end
 
-local light_build_time = 0
 minetest.register_globalstep(function(dtime)
-	total_dtime = total_dtime + dtime
-	if total_dtime > step_time then
-		total_dtime = 0
-		light_build_time = light_build_time + step_time
-		if light_build_time > step_time*5 then
-			light_build_time = 0
+	if wield_light_enabled then
+		wield_dtime = wield_dtime + dtime
+		if wield_dtime > wield_step then
+			wield_dtime = 0
+			for _,cozyplayer in pairs(cozylights.cozyplayers) do
+				local t = os.clock()
+				local player = minetest.get_player_by_name(cozyplayer.name)
+				local pos = vector.round(player:getpos())
+				pos.y = pos.y + 1
+				local wield_name = player:get_wielded_item():get_name()
+				-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
+				-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
+				local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
+				if pos_hash == cozyplayer.pos_hash and cozyplayer.last_wield == wield_name then
+					goto next_player
+				end
+				if cozylights.cozy_items[wield_name] ~= nil then
+					local vel = vector.round(vector.multiply(player:get_velocity(),wield_step))
+					cozylights:draw_wielded_light(
+						pos,
+						cozyplayer.last_pos,
+						cozylights.cozy_items[wield_name],
+						vel,
+						cozyplayer
+					)
+				else
+					cozylights:wielded_light_cleanup(player,cozyplayer,cozyplayer.last_wield_radius or 0)
+				end
+				cozyplayer.pos_hash = pos_hash
+				cozyplayer.last_pos = pos
+				cozyplayer.last_wield = wield_name
+				local exe_time = (os.clock() - t)
+				total_wield_time = total_wield_time + mf(exe_time * 1000)
+				total_wield_step_count = total_wield_step_count + 1
+				print("Av wielded cozy light step time " .. mf(total_wield_time/total_wield_step_count) .. " ms. Sample of: "..total_wield_step_count)
+				if cozylights.crispy_potato and exe_time > wield_step then
+					cozylights:set_wielded_light_radius(cozylights.max_wield_light_radius - 1)
+					minetest.chat_send_all("wield light step was adjusted to "..(exe_time*2).." secs to help crispy potato.")
+					wield_step = exe_time*2
+				end
+				::next_player::
+			end
+		end
+	end
+
+	brush_hold_dtime = brush_hold_dtime + dtime
+	if brush_hold_dtime > brush_hold_step then
+		brush_hold_dtime = 0
+		for _,cozyplayer in pairs(cozylights.cozyplayers) do
+			local t = os.clock()
+			local player = minetest.get_player_by_name(cozyplayer.name)
+			local pos = vector.round(player:getpos())
+			pos.y = pos.y + 1
+			local wield_name = player:get_wielded_item():get_name()
+			--todo: checking against a string is expensive, what do
+			if wield_name == "cozylights:light_brush" then
+				on_brush_hold(player,cozyplayer,pos,t)
+			end
+		end
+	end
+
+	on_gen_dtime = on_gen_dtime + dtime
+	if on_gen_dtime > on_gen_step then
+		on_gen_dtime = 0
+		if cozylights.uncozy_mode == 0 then
 			if #schem_queue > 0 then
 				local s = schem_queue[1]
 				place_schem_but_real(s.pos, s.schematic, s.rotation, s.replacements, s.force_placement, s.flags)
@@ -484,46 +589,30 @@ minetest.register_globalstep(function(dtime)
 					recently_updated = {}
 				end
 			end
-		end
-		local t = os.clock()
-		for _,cozyplayer in pairs(cozylights.cozyplayers) do
-			local player = minetest.get_player_by_name(cozyplayer.name)
-			local pos = vector.round(player:getpos())
-			pos.y = pos.y + 1
-			local wield_name = player:get_wielded_item():get_name()
-			--todo: checking against a string is expensive, what do
-			if wield_name == "cozylights:light_brush" then
-				on_brush_hold(player,cozyplayer,pos)
+		else
+			for _,cozyplayer in pairs(cozylights.cozyplayers) do
+				local player = minetest.get_player_by_name(cozyplayer.name)
+				local pos = vector.round(player:getpos())
+				pos.y = pos.y + 1
+				-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
+				-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
+				local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
+				if pos_hash == cozyplayer.pos_hash then
+					goto next_player
+				end
+				cozyplayer.pos_hash = pos_hash
+				cozyplayer.last_pos = pos
+				uncozy_queue[#uncozy_queue+1] = pos
+				::next_player::
 			end
-
-			if wield_light_enabled == false then
-				goto next_player
+			if #uncozy_queue > 0 then
+				local exe_time = cozylights:clear(uncozy_queue[1], cozylights.uncozy_mode)
+				table.remove(uncozy_queue, 1)
+				if cozylights.crispy_potato and exe_time > on_gen_step then
+					minetest.chat_send_all("on_generated step was adjusted to "..(exe_time*2).." secs to help crispy potato.")
+					on_gen_step = exe_time*2
+				end
 			end
-			-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
-			-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving 		
-			local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
-			if pos_hash == cozyplayer.pos_hash and cozyplayer.last_wield == wield_name then
-				goto next_player
-			end
-			if cozylights.cozy_items[wield_name] ~= nil then
-				local vel = vector.round(vector.multiply(player:get_velocity(),step_time))
-				cozylights:draw_wielded_light(
-					pos,
-					cozyplayer.last_pos,
-					cozylights.cozy_items[wield_name],
-					vel,
-					cozyplayer
-				)
-			else
-				cozylights:wielded_light_cleanup(player,cozyplayer,cozyplayer.last_wield_radius or 0)
-			end
-			cozyplayer.pos_hash = pos_hash
-			cozyplayer.last_pos = pos
-			cozyplayer.last_wield = wield_name
-			total_step_time = total_step_time + mf((os.clock() - t) * 1000)
-			total_step_count = total_step_count + 1
-			--print("Av wielded cozy light step time " .. mf(total_step_time/total_step_count) .. " ms. Sample of: "..total_step_count)
-			::next_player::
 		end
 	end
 end)
@@ -573,6 +662,10 @@ minetest.register_on_generated(function(minp, maxp)
 				MinEdge = minp_exp,
 				MaxEdge = maxp_exp
 			}
+			sources[#sources+1] = {
+				pos=p,
+				cozy_item=cozy_item
+			}
 			--print("adding "..name.." to single_light_queue")
 			--table.insert(cozylights.single_light_queue, {
 			--	pos=p,
@@ -582,7 +675,7 @@ minetest.register_on_generated(function(minp, maxp)
 	end
 	--gent_total = gent_total + mf((os.clock() - t) * 1000)
 	--gent_count = gent_count + 1
-	--print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	--print("Av mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 	if #sources > 0 then
 		print("on_generated adding area:"..cozylights:dump({minp=minp_exp,maxp=maxp_exp, volume=a:getVolume()}))
 		cozylights.area_queue[#cozylights.area_queue+1]={

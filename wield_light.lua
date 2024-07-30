@@ -7,6 +7,7 @@ local c_lights = { c_light1, c_light1 + 1, c_light1 + 2, c_light1 + 3, c_light1 
 local gent_total = 0
 local gent_count = 0
 local mf = math.floor
+--local cozycids_sunlight_propagates = cozylights.cozycids_sunlight_propagates
 
 local function destroy_stale_wielded_light(data,param2data,a,cozyplayer)
 	local c_light1 = c_lights[1]
@@ -110,6 +111,17 @@ function cozylights:set_wielded_light_radius(_radius)
 	cozylights.max_wield_light_radius = _radius
 end
 
+--ffi.cdef([[
+--typedef struct {float x, y, z;} v3float;
+--typedef struct {int16_t x, y, z;} v3;
+--typedef struct {uint16_t* data; uint8_t* param2data;} vm_data;
+--vm_data l_ttt(
+--	v3* sphere_surface, int sphere_surface_length, v3 pos, v3 minp, v3 maxp, uint16_t radius, uint16_t* data, uint8_t* param2data,
+--	uint8_t* dim_levels, bool* cozycids_sunlight, int c_air, uint16_t* c_lights
+--);
+--]])
+--local ctest = ffi.load(cozylights.modpath.."/liblight.so")
+
 function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,vm,a,data,param2data,emin,emax)
 	local t = os.clock()
 	local update_needed = 0
@@ -197,6 +209,45 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	end
 	local zstride, ystride = a.zstride, a.ystride
 	local dirs = { -1*ystride, 1*ystride,-1,1,-1*zstride,1*zstride}
+	--[[--cdata experiments, so if we offload heavy lifting on c, it will actually be slower by 20%
+		--not even a bit faster, so i d rather not continue on this
+		--because vm:set_data works with lua state and expects lua table,
+		--and interpreting c types back to lua table seems to be ridiculously expensive to bother
+		--basically lua is useless and helpless without lua state
+	minetest.chat_send_all("jit.status() "..cozylights:dump(jit.status()))
+	local csphere_surface = ffi.new("v3struct["..(#sphere_surface+1).."]", sphere_surface)
+	local cpos = ffi.new("v3struct", pos)
+	local cemin = ffi.new("v3struct",emin)
+	local cemax = ffi.new("v3struct",emax)
+	local cradius = ffi.new("int",radius)
+	local testcdata = ffi.new("uint16_t["..(#data).."]")
+	local cdim_levels = ffi.new("uint16_t["..(#dim_levels+1).."]", dim_levels)
+	local cc_air = 	ffi.new("int",c_air)
+	local cc_lights = ffi.new("uint16_t["..(#c_lights+1).."]", c_lights)
+	for i = 1, #data do
+		testcdata[i-1] = ffi.new("uint16_t",data[i])
+	end
+	local cparam2data = ffi.new("uint16_t["..#param2data.."]")
+	for i = 1, #param2data do
+		cparam2data[i-1] = ffi.new("uint16_t",param2data[i])
+	end
+	local ccozycids = ffi.new("bool["..#cozycids_sunlight_propagates.."]",cozycids_sunlight_propagates)
+	local length = ffi.new("int",#sphere_surface)
+	local idk = (ctest.l_ttt(csphere_surface,length, cpos,cemin,cemax,cradius,testcdata,cparam2data,cdim_levels,ccozycids,cc_air,cc_lights))
+	idk = idk.data
+	if idk ~= nil then
+		for i=0,#data do
+			local incoming = tonumber(idk[i])
+			if data[i+1] ~= incoming then
+				data[i+1] = incoming
+				table.insert(cozyplayer.prev_wielded_lights, a:position(i+1))
+			end
+		end
+	end
+	for i = 1, #param2data do
+		param2data[i] = tonumber(cparam2data[i-1])
+	end]]
+
 	for i,pos2 in ipairs(sphere_surface) do
 		lightcast_lite(pos, vector.direction(pos,{x=px+pos2.x,y=py+pos2.y,z=pz+pos2.z}),dirs,radius,data,param2data,a,dim_levels,cozyplayer)
 	end
@@ -206,6 +257,6 @@ function cozylights:draw_wielded_light(pos, last_pos, cozy_item,vel,cozyplayer,v
 	cozyplayer.last_wield_radius = radius
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	print("Av wield illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 

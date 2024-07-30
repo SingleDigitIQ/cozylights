@@ -19,15 +19,7 @@ local clearlights = {
 		if size > 120 then
 			return false, "Radius is too big"
 		end
-		local minp,maxp,vm,data,param2data,a = cozylights:getVoxelManipData(pos,size)
-		for i in a:iterp(minp, maxp) do
-			local cid = data[i]
-			if cid >= c_light1 and cid <= c_light_debug14 then
-				data[i] = c_air
-				param2data[i] = 0
-			end
-		end
-		cozylights:setVoxelManipData(vm,data,param2data,true)
+		cozylights:clear(pos,size)
 		return true, "Done."
 	end,
 }
@@ -215,44 +207,64 @@ local cozysettingsgui = {
 		local settings_formspec = {
 			"formspec_version[4]",
 			--"size[6,6.4]",
-		  	"size[5.2,5.8]",
+		  	"size[5.2,8.6]",
 		  	"label[0.95,0.5;Global Cozy Lights Settings]",
 
 			"label[0.95,1.35;Wielded Light Radius]",
-			"field[3.6,1.1;0.7,0.5;wielded_light_radius;;"..cozylights.max_wield_light_radius.."]",
+			"field[3.5,1.1;0.8,0.5;wielded_light_radius;;"..cozylights.max_wield_light_radius.."]",
 		  	"tooltip[0.95,1.1;3.4,0.5;If radius is -1 cozy wielded light is disabled, if 0 then only one node will be lit up just like in familiar Minetest wielded light mod.\n"..
 				"If not zero then it's a sphere of affected nodes with specified radius.\n"..
 				"Max radius is 30 as of now. If you run a potato - you may want to decrease it.]",
 
-			"label[0.95,2.05;Global Step Time]",
-			"field[3.6,1.8;0.7,0.5;step_time;;"..cozylights.step_time.."]",
-			"tooltip[0.95,1.8;3.4,0.5;Cozy Lights global step - smaller value will result in more frequent, fluid light update for wielded light, newly generated map chunks if they have light sources and light rebuild when something was destroyed.\n"..
-			"Small values might be too expensive for potato. Valid values are from 0.01 to 10.00]",
+			"label[0.95,2.05;Wield Light Step]",
+			"field[3.5,1.8;0.8,0.5;wield_step;;"..cozylights.wield_step.."]",
+			"tooltip[0.95,1.8;3.4,0.5;Cozy Lights Wield Light step - smaller value will result in more frequent, fluid wield light update.\n"..
+			"Smaller values might be too expensive for potato. Valid values are from 0.01 to 10.00]",
 
-			"label[0.95,2.75;Brightness Factor]",
-			"field[3.6,2.5;0.7,0.5;brightness_factor;;"..cozylights.brightness_factor.."]",
-		  	"tooltip[0.95,2.5;3.4,0.5;Brightness factor determines how bright overall(relative to own light source brightness) the light will be.\n"..
+			"label[0.95,2.75;Brush Hold Step]",
+			"field[3.5,2.5;0.8,0.5;brush_hold_step;;"..cozylights.brush_hold_step.."]",
+			"tooltip[0.95,2.5;3.4,0.5;Brush Hold Step - smaller value will result in more frequent, fluid light update for light brush on mouse hold.\n"..
+			"Smaller values wont necessarily result in a more fluid update even on a beast PC, because Minetest architecture is too complicated for it to not be janky. Valid values are from 0.01 to 10.00]",
+
+			"label[0.95,3.45;On_Gen() Step]",
+			"field[3.5,3.2;0.8,0.5;on_gen_step;;"..cozylights.on_gen_step.."]",
+			"tooltip[0.95,3.2;3.4,0.5;Generated areas step - smaller value will result in more frequent, fluid light update for newly generated map chunks and schematics if they have light sources, it will also rebuild lights faster when something was destroyed.\n"..
+			"Small values will be too expensive for potato. Valid values are from 0.01 to 10.00]",
+
+			"label[0.95,4.15;Brightness Factor]",
+			"field[3.5,3.9;0.8,0.5;brightness_factor;;"..cozylights.brightness_factor.."]",
+		  	"tooltip[0.95,3.9;3.4,0.5;Brightness factor determines how bright overall(relative to own light source brightness) the light will be.\n"..
 				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
 				"Valid values are from -10.0 to 10.0.\n"..
 				"Brightness factor is not an equivalent of light source brightness(from 1 to 14), it is very low key, affects lights slightly.]",
 
-			"label[0.95,3.45;Reach Factor]",
-			"field[3.6,3.2;0.7,0.5;reach_factor;;"..cozylights.reach_factor.."]",
-			"tooltip[0.95,3.2;3.4,0.5;Reach factor determines how far light of all light source nodes will reach.\n"..
+			"label[0.95,4.85;Reach Factor]",
+			"field[3.5,4.6;0.8,0.5;reach_factor;;"..cozylights.reach_factor.."]",
+			"tooltip[0.95,4.6;3.4,0.5;Reach factor determines how far light of all light source nodes will reach.\n"..
 				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
 				"Valid values are from 0.0 to 10.0.\n"..
 				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
 				"Not recommended to Increase if you run a potato.]",
 
-			"label[0.95,4.15;Dim Factor]",
-			"field[3.6,3.9;0.7,0.5;dim_factor;;"..cozylights.dim_factor.."]",
-			"tooltip[0.95,3.9;3.4,0.5;Dim factor determines how quickly the light fades farther from the source.\n"..
+			"label[0.95,5.55;Dim Factor]",
+			"field[3.5,5.3;0.8,0.5;dim_factor;;"..cozylights.dim_factor.."]",
+			"tooltip[0.95,5.3;3.4,0.5;Dim factor determines how quickly the light fades farther from the source.\n"..
 				"Affects placed nodes(like torches, mese lamps, etc) and wielded light, but not light brush.\n"..
 				"Valid values are from 0.0 to 10.0.\n"..
 				"Not recommended to change if you are not willing to spend probably a lot of time tuning lights.\n"..
 				"Not recommended to Decrease if you run a potato.]",
+			
+			"label[0.95,6.25;Uncozy mode]",
+			"field[3.5,6;0.8,0.5;uncozy_mode;;"..cozylights.uncozy_mode.."]",
+			"tooltip[0.95,6;3.4,0.5;Uncozy mode if above 0 removes all cozy lights in an area with specified radius around all players continuously.\n"..
+				"Useful before Cozy Lights mod uninstall. If you uninstall without prior running this, you will be left with spheres of unknown nodes in an area where Cozy Lights were active.\n"..
+				"Valid values are from 0 to 120. As of now can crash with out of memory error if you move too fast and the radius is too high.]",
 
-		  	"button_exit[1.1,4.7;3,0.8;confirm;Confirm]",
+			"label[0.95,6.95;Crispy Potato]",
+			"checkbox[3.5,6.95;crispy_potato;;"..(cozylights.crispy_potato == true and "true" or "false").."]",
+			"tooltip[0.95,6.7;3.4,0.4;Crispy Potato when checked will auto adjust wielded light and generated area step times to keep potato alive.]",
+		  	
+			"button_exit[1.1,7.5;3,0.8;confirm;Confirm]",
    		}
    		minetest.show_formspec(name, "cozylights:settings",table.concat(settings_formspec, ""))
 		return true
@@ -268,10 +280,20 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		cozylights:set_wielded_light_radius(wielded_light_radius)
 		cozylights:switch_wielded_light(wielded_light_radius ~= -1)
 	end
-	if fields.step_time then
-		local step_time = tonumber(fields.step_time) > 1 and 1 or tonumber(fields.step_time)
-		step_time = step_time < 0.01 and 0.01 or step_time
-		cozylights:set_step_time(step_time)
+	if fields.wield_step then
+		local wield_step = tonumber(fields.wield_step) > 1 and 1 or tonumber(fields.wield_step)
+		wield_step = wield_step < 0.01 and 0.01 or wield_step
+		cozylights:set_wield_step(wield_step)
+	end
+	if fields.brush_hold_step then
+		local brush_hold_step = tonumber(fields.brush_hold_step) > 1 and 1 or tonumber(fields.brush_hold_step)
+		brush_hold_step = brush_hold_step < 0.01 and 0.01 or brush_hold_step
+		cozylights:set_brush_hold_step(brush_hold_step)
+	end
+	if fields.on_gen_step then
+		local on_gen_step = tonumber(fields.on_gen_step) > 1 and 1 or tonumber(fields.on_gen_step)
+		on_gen_step = on_gen_step < 0.01 and 0.01 or on_gen_step
+		cozylights:set_on_gen_step(on_gen_step)
 	end
 	if fields.brightness_factor then
 		local brightness_factor = tonumber(fields.brightness_factor) > 10 and 10 or tonumber(fields.brightness_factor)
@@ -287,6 +309,15 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		local dim_factor = tonumber(fields.dim_factor) > 10 and 10 or tonumber(fields.dim_factor)
 		cozylights.dim_factor = dim_factor < 0 and 0 or dim_factor or 9
 		minetest.settings:set("cozylights_dim_factor",cozylights.dim_factor)
+	end
+	if fields.crispy_potato then
+		cozylights.crispy_potato = fields.crispy_potato == "true" and true or false
+		minetest.settings:set_bool("cozylights_crispy_potato", cozylights.crispy_potato)
+	end
+	if fields.uncozy_mode then
+		local uncozy_mode = tonumber(fields.uncozy_mode) > 120 and 120 or tonumber(fields.uncozy_mode)
+		cozylights.uncozy_mode = uncozy_mode < 0 and 0 or uncozy_mode
+		minetest.settings:set("cozylights_uncozy_mode", cozylights.uncozy_mode)
 	end
 end)
 
@@ -434,6 +465,37 @@ local fixtorches = {
 	end,
 }
 
+local uncozymode = {
+	params = "<size>",
+	description = "clears lights every 5 seconds around every player in area of given radius.\n "..
+	"Useful before Cozy Lights uninstall or for those who is uncertain about the mod.\n",
+	func = function(name, param)
+		local placer = minetest.get_player_by_name(name)
+		local pos = vector.round(placer:getpos())
+		local size = mf(tonumber(param) or cozylights.default_size)
+		minetest.log("action", name .. " uses /uncozymode "..size.." at position: "..cozylights:dump(pos))
+		if size > 120 then
+			return false, "Radius is too big"
+		end
+		cozylights.uncozy_mode = size
+		minetest.settings:set("cozylights_uncozy_mode",size)
+		return true, "Done."
+	end,
+}
+
+local cozymode = {
+	description = "stops /uncozymode.",
+	func = function(name)
+		local placer = minetest.get_player_by_name(name)
+		local pos = vector.round(placer:getpos())
+		minetest.log("action", name .. " uses /cozymode at position: "..cozylights:dump(pos))
+		cozylights.uncozy_mode = 0
+		minetest.settings:set("cozylights_uncozy_mode",0)
+		return true, "Done."
+	end,
+}
+
+
 minetest.register_chatcommand("clearlights", clearlights)
 minetest.register_chatcommand("zcl", clearlights)
 
@@ -466,3 +528,9 @@ minetest.register_chatcommand("za", cozyadjust)
 
 minetest.register_chatcommand("fixtorches", fixtorches)
 minetest.register_chatcommand("zft", fixtorches)
+
+minetest.register_chatcommand("uncozymode", uncozymode)
+minetest.register_chatcommand("uzm", uncozymode)
+
+minetest.register_chatcommand("cozymode", cozymode)
+minetest.register_chatcommand("zm", cozymode)

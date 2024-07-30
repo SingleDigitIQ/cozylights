@@ -2,7 +2,7 @@
 
 Improves the way light sources(torches etc) behave and allows to create huge lights, literal projectors with just a mouse click, light map will be computed for you.
 
-Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us, good enough for release. Feedback, suggestions, bug reports are very welcome. **At this dev stage Cozy Lights can be good for builders in creative mode**, survival is somewhat maybiyish okayish but not really.
+Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us, good enough for release. Feedback, suggestions, bug reports are very welcome. At this dev stage Cozy Lights can be good for builders in creative mode, singleplayer survival is somewhat ok, multiplayer is not yet recommended, unless it's 2-5 players or just schematics with cozy lights and no functionality.
 
 **Light sources illuminate bigger area with default settings:**
 
@@ -26,7 +26,7 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 ## Known issues
 
-1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. There can be other invisible nodes from some mods and games which would interfere with light map.
+1. worldedit:placeholder nodes can prevent light map from generating correctly and this currenly happens without notice or options provided. Current workaround is to define a worldedit region and run ```//replace worldedit:placeholder air``` before adding lights to the scene. This issue also involves cozy wielded light, wordedit placeholders can appear anywhere if the mod is active. There can be other invisible nodes from some mods and games which would interfere with light map.
 
 2. You will have to disable K Ambient Light to use Cozy Lights, together, they are not recommended for now.
 
@@ -129,25 +129,39 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
+- is it possible to have trees grow within the radius of a light block like torches
+
+- add undo
+
+- figure out what to do about lights going through diagonal, one node thick walls. also still somehow manage to keep algo cheap
+
+- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
+
+- see what can be done with race condition of wielded light and node light
+
+- save brush settings in item metadata and change icon somehow to resemble the settings
+
+- add /disableongen
+
+- all queues should be saved in case of server shutdown, so they can be resumed
+
+- add /ignore certain block
+
 - algo for many adjacent lights
 
 - see what can be done about snow and slabs not passing the light through
 
-- make step autoadjust if something is too slow for user hardware, maybe also add setting for that
+- make dropped items emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - make sure bigger lights wont go unnoticed in on_generated and schematic placement. apparnetly on generated can support lights up to 80 if max area radius is 120
-
-- fix nodecore dynamic light source not updating the brightness/radius
-
-- add privileges so schematics can be used on multiplayer server
-
-- all queues should be saved in case of server shutdown, so they can be resumed
-
-- make dropped items to emit cozy light if they have light_source above 0, just like in original wielded light mod
 
 - stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
 
 - illuminate transparent liquids too if possible without making it look weird, except dont make floodable light sources work underwater just like in original wielded light
+
+- fix nodecore dynamic light source not updating the brightness/radius
+
+- add privileges so schematics can be used on multiplayer server
 
 - parse minetest forum for optional_depends
 
@@ -163,9 +177,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - if certain treshold of light source commonality in an area is reached, those light sources should be ignored
 
-- would it be possible without too much work to programatically determine global commonality of a node from mapgen? example: all water was made to be a light_source of 1 by a game/mod
-
-- add undo
+- would it be possible without too much work to programatically determine global commonality of a node from mapgen?
 
 - add optional more pleasant day/night cycle
 
@@ -176,10 +188,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - move to base "unsafe" methods for tables? seems like luajit optimizes it all away and it's useless to bother?
 
 - try spread work over several loops and try vector.add
-
-- figure out what to do about lights going through diagonal, one node thick walls. also still somehow manage to keep algo cheap
-
-- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
 
 - maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
 
@@ -207,11 +215,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ### Some expensive notes stackoverflow will never tell about LuaJIT to you or to future me. Summing up my discord rambling because COVID made me forget some of Lua I tried before, so I am writing it down for now.
 
-TLDR: LuaJIT is certainly impressive in some parts, however I would rather refrain from using it for absolutely anything that implies even a bit of performance, unless there is no way to avoid it. It's too slow, and when you try to squeeze anything out of it, it loses most of it appeal/narrative, it even loses purpose. If still too many words, remember just this about Lua: never try to optimize Lua too much, it's never worth it, and, just let Lua iterate. Hating on LuaJIT is based and normalpilled, it's just faster Python.
+TLDR: LuaJIT is certainly impressive in some parts, however I would rather refrain from using it for absolutely anything that implies even a bit of performance, and unless there is no way to avoid it, deprecate Lua as a terrible inconvenience and never look back. It's too slow, and when you try to squeeze anything out of it, it loses most of its appeal/narrative, it even loses purpose. If still too many words, remember just this about Lua: never try to optimize Lua too much, it's never worth it, and, just let Lua iterate.
 
-1. While being smol, it still fails to outperform another state of the art JIT - JS V8. Given that JS V8 is big tech kind state of the art, which means there is certainly at the very least a significant room for improvement. Advantage of Lua in comparison to V8: less RAM consuption for small programs, so it's reasonable to run a bit of LuaJIT on weak hardware, like phones, watches, some smart-whatever, robots. It's not the worst choice.
+1. While being smol, it still fails to outperform another state of the art JIT - JS V8. And thats given that JS V8 is big tech kind state of the art, which means there is certainly at the very least a significant room for improvement. Advantage of Lua in comparison to V8: less RAM consuption for small programs, so it's reasonable to run a bit of LuaJIT on weak hardware, like phones, watches, some smart-whatever, robots. In that case it's not the worst choice.
 
-2. Readability syntax sugar is a meme, I am here to code, not to shitpost, I prefer completely different state of mind from that, something very different, like curly braces and what not.
+2. Readability syntax is a meme, I am here to code, not to shitpost, I prefer completely different state of mind from that, something very different, like curly braces and what not.
 
 3. Lua bytecode, same way as Python, keeps function and variable names uncompressed. You could argue but hey that means we can at least restore the original file almost one-to-one from bytecode? Who needs that really, when RAM efficiency is 25%(!) better after using a minifier, and if you use minifier, you abandon debugging and readability(just like in Python, which is a meme language too, and it's typical very readable one letter long variable names). This is how as codebase grows, Lua loses it's only advantage over V8. Hence technically peak Lua is a joke.
 
@@ -221,7 +229,7 @@ TLDR: LuaJIT is certainly impressive in some parts, however I would rather refra
 
 5. While you could cope that CPU just does not have enough cache and all, clearly, LuaJIT is best at optimizing *simple* loops. Branches, hash look ups, math? Try your best to decrease the amount for all of those in a loop. It appears that Lua would rather iterate uselessly over and over again the same entries, than have a branch to cut amount of iterations/operations in general. Optimization tip is basically this: try to break down a complicated loop into several simpler loops. LuaJIT is ridiculously fast with simple loops.
 
-6. It appears that most popular object positioned most efficiently in memory. I am not entirely certain how exactly does that happen, because I didn't study LuaJIT source since it's underwhelming performance in anything remotely complicated leaves me feeling powerless, so it's not fun. A hack could be a loop that interacts with an object on startup, if you call/interact with the object enough times it will be slightly faster. It is noticeable in massively expensive loops.
+6. It appears that most popular object positioned most efficiently in memory. I am not entirely certain how exactly does that happen, because I didn't study LuaJIT source much since it's underwhelming performance in anything remotely complicated leaves me feeling powerless, so it's not fun. A hack could be a loop that interacts with an object on startup, if you call/interact with the object enough times it will be slightly faster. It is noticeable in massively expensive loops.
 
 7. If you know you are guaranteeed to have an object consume more RAM during runtime, you may want to preallocate if the codebase is complex enough. Well, at least this behavior can be fully expected based on fundamentals.
 
@@ -229,11 +237,17 @@ TLDR: LuaJIT is certainly impressive in some parts, however I would rather refra
 
 9. You can obviously somewhat control cache with local variables, but there is a catch, it only gives somewhat coherent performance results if the loop is very simple.
 
-10. Apparently of memory allocation being complex in LuaJIT, it can crash during trying to allocate too much memory in one go as if it's in the earliest dev stage and not ready for prod. JS V8 maybe leaks, but at least does not crash just like that.
+10. Apparently because of memory allocation being complex in LuaJIT, it can crash during trying to allocate too much in one go as if it's in the earliest dev stage and not ready for prod. JS V8 maybe leaks, but at least does not crash just like that.
+
+11. To make any good use of ffi types, you have to be aware of the fact that amount of types in function context will affect it's performance. More types = slower. So same as V8, it might optimize smaller functions better, but not necessarily, it depends: if it's one lua type number and there is a lot of work to do for that type, then you better off having a big one surely. Ffi is not a simple plug-and-play for previously optimized pure Lua algo, you may need to restructure your code to ensure more types dont clog the cache. And with Minetest API it may end up being useless.
+
+12. Offloading work to C has it's caveats. If you are doing it through ffi and need to manipulate a lot of data, like vm_data in Cozy Lights example, while your algorithm itself will be faster, if like with Minetest example, the api expects lua table and only that, you will have to interpret C results, run a loop to make a lua table, and that part is so extremely slow, you might end up with slower code overall. In less complicated cases it's useful.
 
 ## LICENSE
 
-MIT+(you are not legally allowed to infect it with GPL, AGPL or EUPL) for my code, will appreciate reasonable attribution
+MIT+(you are not legally allowed to infect it with GPL, AGPL or EUPL) for my code.
+
+Will appreciate reasonable attribution, as in, dont be a typical open source dev who takes a good part of some other open source project and only mentions it in code, so that not only most of the devs, users have no way of ever learning about that.
 
 And there is a texture from MTG, which will be eventually replaced:
 

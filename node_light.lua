@@ -76,7 +76,7 @@ function cozylights:draw_node_light(pos,cozy_item,vm,a,data,param2data,fix_edges
 	end
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	print("Average illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	print("Av illum time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end
 
 -- handle_async?
@@ -162,7 +162,7 @@ function cozylights:destroy_light(pos, cozy_item)
 
 	remt_total = remt_total + mf((os.clock() - t) * 1000)
 	remt_count = remt_count + 1
-	print("Average light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
+	print("Av light removal time " .. mf(remt_total/remt_count) .. " ms. Sample of: "..remt_count)
 end
 
 --[[
