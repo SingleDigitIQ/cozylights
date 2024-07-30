@@ -126,9 +126,9 @@ minetest.after(1, function()
 	cozylights:finalize(cozycids_sunlight_propagates)
 	print(#cozycids_sunlight_propagates)
 	cozylights.cozycids_sunlight_propagates = {}
-	local last_version_welcome = minetest.settings:get("last_version_welcome")
-	if last_version_welcome ~= cozylights.version then
-		minetest.settings:set("last_version_welcome",cozylights.version)
+	local version_welcome = minetest.settings:get("version_welcome")
+	if version_welcome ~= cozylights.version then
+		minetest.settings:set("version_welcome",cozylights.version)
 		minetest.chat_send_all(">.< Running Cozy Lights "..cozylights.version.." alpha. Some features are still missing or might not work properly and might be fixed tomorrow or next week."..
 		"\n>.< To learn more about what it can do check ContentDB page: https://content.minetest.net/packages/SingleDigitIQ/cozylights/"..
 		"\n>.< If you experience problems, appreciate if you report them on ContentDB, Minetest forum, Github or Discord."..

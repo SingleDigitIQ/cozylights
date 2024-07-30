@@ -5,7 +5,7 @@ cozylights = {
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
-	step_time = tonumber(minetest.settings:get("cozylights_step_time")) or 0.1,
+	step_time = tonumber(minetest.settings:get("cozylights_step_time")) or 0.2,
 	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 19,
 	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
@@ -63,6 +63,7 @@ cozylights = {
 	cozyplayers = {},
 	area_queue = {},
 	single_light_queue = {},
+	modpath = minetest.get_modpath(minetest.get_current_modname())
 }
 
 local total_dtime = 0
@@ -86,6 +87,7 @@ end
 dofile(modpath.."/nodes.lua")
 dofile(modpath.."/shared.lua")
 dofile(modpath.."/chat_commands.lua")
+--ffi = require("ffi")
 dofile(modpath.."/wield_light.lua")
 dofile(modpath.."/node_light.lua")
 dofile(modpath.."/light_brush.lua")
@@ -410,7 +412,6 @@ minetest.place_schematic = function(pos, schematic, rotation, replacements, forc
 end
 
 local place_schematic_on_vmanip_nicely = minetest.place_schematic_on_vmanip
-
 minetest.place_schematic_on_vmanip = function(vmanip, minp, filename, rotation, replacements, force_placement,flags)
 	if not place_schematic_on_vmanip_nicely(vmanip, minp, filename, rotation, replacements, force_placement,flags) then return end
 	schem_queue[#schem_queue+1] = {
@@ -424,7 +425,6 @@ minetest.place_schematic_on_vmanip = function(vmanip, minp, filename, rotation, 
 end
 
 local createschemthatisveryreadable = minetest.create_schematic
-
 minetest.create_schematic = function(p1, p2, probability_list, filename, slice_prob_list)
 	if not createschemthatisveryreadable(p1, p2, probability_list, filename, slice_prob_list) then return end
 	-- unreadable stuff happens here
@@ -434,8 +434,6 @@ minetest.create_schematic = function(p1, p2, probability_list, filename, slice_p
 		sources = nil
 	}
 end
-
---minetest.create_schematic(p1, p2, probability_list, filename, slice_prob_list)
 
 
 local function on_brush_hold(player,cozyplayer,pos)
@@ -573,6 +571,10 @@ minetest.register_on_generated(function(minp, maxp)
 				MinEdge = minp_exp,
 				MaxEdge = maxp_exp
 			}
+			sources[#sources+1] = {
+				pos=p,
+				cozy_item=cozy_item
+			}
 			--print("adding "..name.." to single_light_queue")
 			--table.insert(cozylights.single_light_queue, {
 			--	pos=p,
@@ -582,7 +584,7 @@ minetest.register_on_generated(function(minp, maxp)
 	end
 	--gent_total = gent_total + mf((os.clock() - t) * 1000)
 	--gent_count = gent_count + 1
-	--print("Average mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	--print("Av mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 	if #sources > 0 then
 		print("on_generated adding area:"..cozylights:dump({minp=minp_exp,maxp=maxp_exp, volume=a:getVolume()}))
 		cozylights.area_queue[#cozylights.area_queue+1]={

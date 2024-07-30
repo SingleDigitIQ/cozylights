@@ -251,7 +251,7 @@ function cozylights:draw_brush_light(pos, lb)
 		return
 	end
 	pos.y = pos.y + ylvl
-	--data[a:indexp(pos)] = c_lights[brightness]
+
 	if mode == 1 then
 		if cozylights.always_fix_edges == true then
 			local visited_pos = {}
@@ -337,5 +337,5 @@ function cozylights:draw_brush_light(pos, lb)
 	vm:write_to_map()
 	gent_total = gent_total + mf((os.clock() - t) * 1000)
 	gent_count = gent_count + 1
-	print("Average draw time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
+	print("Av draw time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
 end

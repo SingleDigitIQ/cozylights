@@ -1,7 +1,7 @@
 dofile("../helpers.lua")
 dofile("../../../builtin/common/vector.lua")
 
--- this exists to basically find sweet spot for dirfloor in fastest way i found to spread light.
+-- this exists to basically find sweet spot for dirfloor in fastest way i could come up with to spread light.
 -- dirfloor should change somehow cheaply according to radius maybe or 
 -- according to ray angles, or, dirfloor should be split in x,y,z axis equivalents
 -- and those should be adjusted.
@@ -57,7 +57,7 @@ local function raycast(dir, radius)
 		local y = mf(dy*i+dirfloor)
 		local z = mf(dz*i+dirfloor)
 		local idx = (z+1+radius)*stride_z+1+(y+1+radius)*stride_y+(x+1+radius)
-		if ray[idx] ~= true then
+		if not ray[idx] then
 			ray[idx] = true
 		end
 	end
@@ -73,7 +73,7 @@ local function reconstruct_sphere(radius)
 	for _,pos2 in ipairs(sphere_surface) do
 		local ray = raycast(vector.direction(pos, pos2),radius)
 		for i,_ in pairs(ray) do
-			if reconstructed_sphere[i] ~= true then
+			if not reconstructed_sphere[i] then
 				reconstructed_sphere[i] = true
 				reconstructed_sphere_len = reconstructed_sphere_len + 1
 			end
