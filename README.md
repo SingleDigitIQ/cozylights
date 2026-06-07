@@ -1,3 +1,13 @@
+
+
+https://github.com/user-attachments/assets/d5be20a0-8170-4ea5-b28e-a35e80f863c4
+
+
+
+https://github.com/user-attachments/assets/3c8c131a-f3e3-43fa-ab59-9ad290defee7
+
+
+
 # Cozy Lights
 
 Improves the way light sources(torches etc) behave and allows to create huge lights, literal projectors with just a mouse click, light map will be computed for you.
