@@ -15,7 +15,7 @@ cozylights_dim_factor (Global ambient light source dim factor) float 9.0 0.0 10.
 #	-1 means wielded light is disabled
 #	0 means only one node is affected, so it basically acts like typical wielded light in Minetest
 #	if it's more than 0 then it's a sphere  in which light will spread
-cozylights_wielded_light_radius (Cozy wielded light radius) int 19 -1 30
+cozylights_wielded_light_radius (Cozy wielded light radius) int 15 -1 30
 
 #	sets all light sources to 1 so that the engine will not render anticlimactic squares for torches
 #	and such. if a player removes cozylights from a world while this is set to true, fixmap mod for existing lights will be required, therefore default is set

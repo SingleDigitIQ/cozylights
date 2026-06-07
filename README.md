@@ -4,7 +4,7 @@ Improves the way light sources(torches etc) behave and allows to create huge lig
 
 Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us, good enough for release. Feedback, suggestions, bug reports are very welcome. At this dev stage Cozy Lights can be good for builders in creative mode, singleplayer survival is somewhat ok, multiplayer is not yet recommended, unless it's 2-5 players or just schematics with cozy lights and no functionality.
 
-**Just to clarify, early alpha means that some stuff might not work at all, or work incorrectly, and there can be bugs. This mod can ruin your old world, so use it in a new world.**
+**Just to clarify, early alpha means that some stuff might not work at all, or work incorrectly, and there can be bugs. This mod can ruin your old world, so use it in a new world. The development of this mod depends on your feedback, if nobody is using it, then there is no point.**
 
 **Light sources illuminate bigger area with default settings:**
 

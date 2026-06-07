@@ -1,14 +1,14 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.8",
+	version = "0.2.9",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
-	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.01,
+	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.03,
 	brush_hold_step = tonumber(minetest.settings:get("cozylights_brush_hold_step")) or 0.07,
 	on_gen_step = tonumber(minetest.settings:get("cozylights_on_gen_step")) or 0.7,
-	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 17,
+	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 15,
 	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
 	uncozy_mode = tonumber(minetest.settings:get("cozylights_uncozy_mode")) or 0,
