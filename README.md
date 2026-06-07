@@ -4,6 +4,8 @@ Improves the way light sources(torches etc) behave and allows to create huge lig
 
 Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expressed curiosity, that already makes six of us, good enough for release. Feedback, suggestions, bug reports are very welcome. At this dev stage Cozy Lights can be good for builders in creative mode, singleplayer survival is somewhat ok, multiplayer is not yet recommended, unless it's 2-5 players or just schematics with cozy lights and no functionality.
 
+**Just to clarify, early alpha means that some stuff might not work at all, or work incorrectly, and there can be bugs. This mod can ruin your old world, so use it in a new world.**
+
 **Light sources illuminate bigger area with default settings:**
 
 ![cozy nodecore](https://raw.githubusercontent.com/SingleDigitIQ/media/main/cozy_nodecore.gif)
@@ -34,9 +36,7 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 4. When there are too many light sources in a generated area, it gets ignored. If you run /rebuildlights in such area, it will attempt to do so, but probably would need too much time
 
-5. If you are moving too fast(creative or falling from above) and its first time you visit many areas, generation will not look like it's immediate
-
-6. Some lights are still being missed in generated mapblocks
+5. Can crash your server with out of memory error if you are too potato. Typical limit is about 1-2 GB for LuaJIT because of how it uses 32bit virtual registers or something, and in some cases it can be exceeded, especially in multiplayer, or with very particular mods that place too many light sources on the map.
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
@@ -105,13 +105,9 @@ Most of the most popular ones on paper, but its early alpha, so it can still be 
 
 For definitely supported games, check the section of supported games on ContentDB, or mod.conf, if the game is in a list then support is full for what the mod can currently do, current *known* exceptions are:
 
-**Nodecore** - partial support, light map does not update for dynamic light sources(the ones that change brightness over time)
+**Nodecore** - partial support. light map does not update for dynamic light sources(the ones that change brightness over time)
 
-**Age of Mending** - partial support, too many light sources in caves sometimes, and so far Cozy Lights cant process that without completely freezing everything for some time
-
-**Piranesi** - does not seem to work at all, probably something schematic related
-
-**Shadow Forest** - it works as intended, but there is only campfire to make cozy, wont feel like an upgrade
+**Age of Mending** - partial support. too many light sources in caves sometimes, and so far Cozy Lights cant process that without completely freezing everything for some time
 
 If a mod or a game you like is not supported or there are some problems not listed here, tell me immediately. You can just drop a list of games/mods you have issues with in review. Eventually cozy lights' support will attempt to balance the overall feel and look of the game/mod with meticulous consideration, but we are not at that stage yet.
 
@@ -129,15 +125,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
-- is it possible to have trees grow within the radius of a light block like torches
+- with new accurate algo brush in any mode other than default probably functions incorrectly
 
 - add undo
 
-- figure out what to do about lights going through diagonal, one node thick walls. also still somehow manage to keep algo cheap
-
 - Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
-
-- see what can be done with race condition of wielded light and node light
 
 - save brush settings in item metadata and change icon somehow to resemble the settings
 
@@ -213,7 +205,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - ci for optional_depends auto update according to content db mods/games updates and releases
 
-### Some expensive notes stackoverflow will never tell about LuaJIT to you or to future me. Summing up my discord rambling because COVID made me forget some of Lua I tried before, so I am writing it down for now.
+### Some empirical observations about LuaJIT
 
 TLDR: LuaJIT is certainly impressive in some parts, however I would rather refrain from using it for absolutely anything that implies even a bit of performance, and unless there is no way to avoid it, deprecate Lua as a terrible inconvenience and never look back. It's too slow, and when you try to squeeze anything out of it, it loses most of its appeal/narrative, it even loses purpose. If still too many words, remember just this about Lua: never try to optimize Lua too much, it's never worth it, and, just let Lua iterate.
 
