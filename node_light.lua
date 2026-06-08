@@ -30,6 +30,10 @@ function cozylights:draw_node_light(pos, cozy_item, vm, a, data, param2data, fix
 	if cozylights.drawn_nodes[hash] then
 		return
 	end
+	local actual_node = minetest.get_node(pos)
+	if not cozylights.cozy_items[actual_node.name] then
+		return
+	end
 	cozylights.drawn_nodes[hash] = true
 	local t = os.clock()
 	local update_needed = 0
@@ -56,15 +60,16 @@ function cozylights:draw_node_light(pos, cozy_item, vm, a, data, param2data, fix
 	else
 		return
 	end
-	pos.y = pos.y + ylvl
+
+	local draw_pos = { x = pos.x, y = pos.y + ylvl, z = pos.z }
 	fix_edges = fix_edges == nil and cozylights.always_fix_edges or fix_edges
 	if fix_edges == true then
 		local visited_pos = {}
 		for i, pos2 in ipairs(sphere_surface) do
-			local end_pos = { x = pos.x + pos2.x, y = pos.y + pos2.y, z = pos.z + pos2.z }
+			local end_pos = { x = draw_pos.x + pos2.x, y = draw_pos.y + pos2.y, z = draw_pos.z + pos2.z }
 			cozylights:lightcast_fix_edges(
-				pos,
-				vector.direction(pos, end_pos),
+				draw_pos,
+				vector.direction(draw_pos, end_pos),
 				radius,
 				data,
 				param2data,
@@ -75,9 +80,9 @@ function cozylights:draw_node_light(pos, cozy_item, vm, a, data, param2data, fix
 		end
 	else
 		for i, pos2 in ipairs(sphere_surface) do
-			local end_pos = { x = pos.x + pos2.x, y = pos.y + pos2.y, z = pos.z + pos2.z }
-			cozylights.dir = vector.direction(pos, end_pos)
-			cozylights:lightcast(pos, vector.direction(pos, end_pos), radius, data, param2data, a, dim_levels)
+			local end_pos = { x = draw_pos.x + pos2.x, y = draw_pos.y + pos2.y, z = draw_pos.z + pos2.z }
+			cozylights.dir = vector.direction(draw_pos, end_pos)
+			cozylights:lightcast(draw_pos, vector.direction(draw_pos, end_pos), radius, data, param2data, a, dim_levels)
 		end
 	end
 	if update_needed == 1 then
@@ -101,6 +106,9 @@ end
 
 function cozylights:destroy_light(pos, cozy_item, tx_locks)
 	local t = os.clock()
+	local original_hash = hash_pos(pos)
+	cozylights.drawn_nodes[original_hash] = nil
+	cozylights.recently_updated[original_hash] = nil
 	local radius = cozylights:calc_dims(cozy_item)
 	local _, _, vm, data, param2data, a = cozylights:getVoxelManipData(pos, radius)
 	local ylvl = 1
@@ -176,7 +184,7 @@ function cozylights:destroy_light(pos, cozy_item, tx_locks)
 		end
 	end
 	local rebuild_minp, rebuild_maxp = global_rebuild_minp, global_rebuild_maxp
-	local pos_hash = hash_pos({ x = pos.x, y = center_y, z = pos.z })
+	local pos_hash = original_hash
 	local sources = {}
 	local single_light_queue = cozylights.single_light_queue
 	if #posrebuilds > 0 then
