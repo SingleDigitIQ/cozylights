@@ -41,3 +41,7 @@ function cozylights:findIn(value, array)
 	end
 	return false
 end
+
+function cozylights.hash_pos(pos)
+	return (pos.z + 32768) * 4294967296 + (pos.y + 32768) * 65536 + (pos.x + 32768)
+end

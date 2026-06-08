@@ -180,9 +180,7 @@ minetest.place_schematic = function(pos, schematic, rotation, replacements, forc
 		local lights_present = minetest.find_nodes_in_area(minp, maxp, cozy_lights_names)
 		if #lights_present > 0 then
 			bulk_clear_cozylights(minp, maxp)
-			if cozylights.area_queue then
-				cozylights:push_area_queue(minp, maxp, nil)
-			end
+			cozylights:push_area_queue(minp, maxp, nil)
 		end
 	end
 	return core_place_schematic(pos, schematic, rotation, replacements, force_placement, flags)
@@ -195,9 +193,7 @@ minetest.spawn_tree = function(pos, treedef)
 	local lights_present = minetest.find_nodes_in_area(minp, maxp, cozy_lights_names)
 	if #lights_present > 0 then
 		bulk_clear_cozylights(minp, maxp)
-		if cozylights.area_queue then
-			cozylights:push_area_queue(minp, maxp, nil)
-		end
+		cozylights:push_area_queue(minp, maxp, nil)
 	end
 	return core_spawn_tree(pos, treedef)
 end

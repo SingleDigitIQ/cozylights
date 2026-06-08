@@ -7,7 +7,7 @@ cozylights_default_size (Default chat command radius) int 40 5 120
 cozylights_brightness_factor (Global ambient light source brightness modifier) float 3.0 -10.0 10.0
 
 #	affects max radius of the light but only when its bright enough, if its very dim the setting will do nothing
-cozylights_reach_factor (Global ambient light source reach factor) float 4.0 0.0 10.0
+cozylights_reach_factor (Global ambient light source reach factor) float 3.0 0.0 10.0
 
 #	how fast light dims further away from the source, higher means farther dim lights will persist for longer
 cozylights_dim_factor (Global ambient light source dim factor) float 9.0 0.0 10.0
