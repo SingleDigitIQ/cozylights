@@ -42,11 +42,11 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 2. You will have to disable K Ambient Light to use Cozy Lights, together, they are not recommended for now.
 
-3. Light emitting liquids always straight up ignored, light emitting airlikes too
+3. Can crash your server with out of memory error if you are too potato. Typical limit is about 1-2 GB for LuaJIT because of how it uses 32bit virtual registers or something, and in some cases it can be exceeded, especially in multiplayer, or with very particular mods that place too many light sources on the map.
 
-4. When there are too many light sources in a generated area, it gets ignored. If you run /rebuildlights in such area, it will attempt to do so, but probably would need too much time
+4. /uncozymode does not work reliably and can crash with out of memory error
 
-5. Can crash your server with out of memory error if you are too potato. Typical limit is about 1-2 GB for LuaJIT because of how it uses 32bit virtual registers or something, and in some cases it can be exceeded, especially in multiplayer, or with very particular mods that place too many light sources on the map.
+5. In case you have adjusted global_radius in /cozysettings or /zs and its now lower than the previous, light clearance for older lights wont work correctly, you will have to /clearlights manually
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
@@ -138,6 +138,8 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - with new accurate algo brush in any mode other than default probably functions incorrectly
 
 - add undo
+
+- add shadow_brush
 
 - Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
 

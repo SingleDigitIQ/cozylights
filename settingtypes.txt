@@ -3,14 +3,14 @@
 #	if none given, this default value will be used
 cozylights_default_size (Default chat command radius) int 40 5 120
 
-#	max brightness of surrounding light. does not affect a light_source node base value. attention: if light is too bright, the scene can lose nuance
-cozylights_brightness_factor (Global ambient light source brightness modifier) float 3.0 -10.0 10.0
+#   determines how bright overall(relative to own light source brightness) the light will be
+cozylights_global_brightness (Global Brightness Override) int 0 -10 10
 
-#	affects max radius of the light but only when its bright enough, if its very dim the setting will do nothing
-cozylights_reach_factor (Global ambient light source reach factor) float 3.0 0.0 10.0
+#	determines how far light of all light source nodes will reach
+cozylights_global_radius (Global Light Radius) int 12 1 50
 
-#	how fast light dims further away from the source, higher means farther dim lights will persist for longer
-cozylights_dim_factor (Global ambient light source dim factor) float 9.0 0.0 10.0
+#	determines the gradient, how slowly the brightness fades farther from the source
+cozylights_global_strength (Global Strength / Falloff) float 0.5 0.0 1.0
 
 #	-1 means wielded light is disabled
 #	0 means only one node is affected, so it basically acts like typical wielded light in Minetest
@@ -29,3 +29,4 @@ cozylights_always_fix_edges (Always fix edges) bool true
 
 #	if higher, then it will update slower and stress potato CPU less
 cozylights_step_time (Cozy Lights Global Step time) float 0.1 0.01 1.0
+

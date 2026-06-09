@@ -25,7 +25,7 @@ local remt_total = 0
 local remt_count = 0
 local mf = math.floor
 
-function cozylights:draw_node_light(pos, cozy_item, vm, a, data, param2data, fix_edges)
+function cozylights:draw_node_light(pos, cozy_item, cozy_name, vm, a, data, param2data, fix_edges)
 	local hash = hash_pos(pos)
 	if cozylights.drawn_nodes[hash] then
 		return
@@ -37,7 +37,7 @@ function cozylights:draw_node_light(pos, cozy_item, vm, a, data, param2data, fix
 	cozylights.drawn_nodes[hash] = true
 	local t = os.clock()
 	local update_needed = 0
-	local radius, dim_levels = cozylights:calc_dims(cozy_item)
+	local radius, dim_levels = cozylights:calc_dims(cozy_name, cozy_item)
 	--print("cozy_item:"..cozylights:dump(cozy_item))
 	--print("dim_levels: "..cozylights:dump(dim_levels))
 	--print("spreading light over a sphere with radius of "..radius)
@@ -100,16 +100,20 @@ function cozylights:rebuild_light()
 		return
 	end
 	print("#single_light_queue is: " .. #single_light_queue)
-	cozylights:draw_node_light(single_light_queue[1].pos, single_light_queue[1].cozy_item)
+	cozylights:draw_node_light(
+		single_light_queue[1].pos,
+		single_light_queue[1].cozy_item,
+		single_light_queue[1].cozy_item.name
+	)
 	table.remove(single_light_queue, 1)
 end
 
-function cozylights:destroy_light(pos, cozy_item, tx_locks)
+function cozylights:destroy_light(pos, cozy_item, cozy_name, tx_locks)
 	local t = os.clock()
 	local original_hash = hash_pos(pos)
 	cozylights.drawn_nodes[original_hash] = nil
 	cozylights.recently_updated[original_hash] = nil
-	local radius = cozylights:calc_dims(cozy_item)
+	local radius = cozylights:calc_dims(cozy_name, cozy_item)
 	local _, _, vm, data, param2data, a = cozylights:getVoxelManipData(pos, radius)
 	local ylvl = 1
 	local cid = data[a:index(pos.x, pos.y - 1, pos.z)]
@@ -193,7 +197,7 @@ function cozylights:destroy_light(pos, cozy_item, tx_locks)
 			local posrebuild_hash = hash_pos(posrebuild)
 			if posrebuild_hash ~= pos_hash then
 				local node = cozylights.get_node(posrebuild)
-				local rebuild_radius, _ = cozylights:calc_dims(cozylights.cozy_items[node.name])
+				local rebuild_radius, _ = cozylights:calc_dims(node.name, cozylights.cozy_items[node.name])
 				local max_distance = rebuild_radius + radius
 				if max_distance > vector.distance(pos, posrebuild) then
 					cozylights.drawn_nodes[posrebuild_hash] = nil
@@ -252,7 +256,7 @@ function cozylights:update_aperture(pos_broken)
 		local source_pos = posrebuilds[i]
 		local node = cozylights.get_node(source_pos)
 		local cozy_item = cozylights.cozy_items[node.name]
-		local radius, dim_levels = cozylights:calc_dims(cozy_item)
+		local radius, dim_levels = cozylights:calc_dims(node.name, cozy_item)
 		local V_a = vector.subtract(pos_broken, source_pos)
 		local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
 		if D_sq <= radius * radius and D_sq > 0 then
