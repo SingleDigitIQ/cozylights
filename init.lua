@@ -303,7 +303,7 @@ minetest.register_on_joinplayer(function(player)
 		lbrush={
 			brightness=14,
 			radius=80,
-			strength=0.8,
+			strength=0.5,
 			mode=1,
 			cover_only_surfaces=0,
 			pos_hash=0,
@@ -681,7 +681,7 @@ minetest.register_on_dignode(function(pos, oldnode, digger)
 	if cozylights.cozycids_light_sources[minetest.get_content_id(oldnode.name)] then
 		return
 	end
-	cozylights:update_aperture(pos)
+	cozylights:update_cone(pos)
 end)
 
 -- to update light maps when an obstruction is placed
