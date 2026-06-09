@@ -1,7 +1,12 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.9",
+	version = "0.2.10",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
+
+	global_brightness = tonumber(minetest.settings:get("cozylights_global_brightness")) or 12,
+	global_radius = tonumber(minetest.settings:get("cozylights_global_radius")) or 15,
+	global_strength = tonumber(minetest.settings:get("cozylights_global_strength")) or 0.5,
+
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
 	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
 	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
@@ -22,41 +27,17 @@ cozylights = {
 	-- settings will make the environment look blunt
 	coziest_table = {
 		--"dimlike"
-		[1] = {
-			brightness_factor = 0,
-			reach_factor = 0,
-			dim_factor = 0
-		},
-		--"lowkeylike" almost the same as dimlike, but reaches much farther with its barely visible light
-		[2] = {
-			brightness_factor = 0,
-			reach_factor = 2,
-			dim_factor = -3
-		},
-		-- "candlelike" something-something
-		[3] = {
-			brightness_factor = 0,
-			reach_factor = 2,
-			dim_factor = -3
-		},
-		-- "torchlike" torches, fires, flames. made much dimmer than what default engine lights makes them
-		[4] = {
-			brightness_factor = -2,
-			reach_factor = 0,
-			dim_factor = 0
-		},
-		-- "lamplike" a bright source, think mese lamp(actually turned out its like a projector, and below is even bigger projector)
-		[5] = {
-			brightness_factor = 0,
-			reach_factor = 3,
-			dim_factor = 4
-		},
-		-- "projectorlike" a bright source with massive reach
-		[6] = {
-			brightness_factor = 1,
-			reach_factor = 3,
-			dim_factor = 4
-		},
+		[1] = { brightness = -4, radius = 4, strength = -0.1 },
+		--"lowkeylike"
+		[2] = { brightness = -2, radius = 8, strength = 0.0 },
+		-- "candlelike"
+		[3] = { brightness = -1, radius = 6, strength = 0.0 },
+		-- "torchlike"
+		[4] = { brightness = 0, radius = 12, strength = 0.1 },
+		-- "lamplike"
+		[5] = { brightness = 1, radius = 18, strength = 0.1 },
+		-- "projectorlike"
+		[6] = { brightness = 2, radius = 25, strength = 0.2 },
 	},
 	-- appears nodes and items might not necessarily be the same array
 	source_nodes = nil,
@@ -91,6 +72,7 @@ dofile(modpath.."/wield_light.lua")
 dofile(modpath.."/node_light.lua")
 dofile(modpath.."/light_brush.lua")
 dofile(modpath.."/api_overrides.lua")
+dofile(modpath.."/manual.lua")
 
 local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
@@ -128,7 +110,7 @@ minetest.register_on_mods_loaded(function()
 				--if string.find(def.name,"torch") then
 				--	mods = 3
 				--end
-				cozy_items[def.name] = {light_source= def.light_source or 0,floodable=def.floodable or false,modifiers=mods}
+				cozy_items[def.name] = {name = def.name,light_source= def.light_source or 0,floodable=def.floodable or false,modifiers=mods}
 				if not string.find(def.name, "cozylights:light") then
 					source_nodes[#source_nodes+1] = def.name
 				end
@@ -161,7 +143,7 @@ minetest.register_on_mods_loaded(function()
 								base_on_destruct(pos)
 								print(cozylights:dump(pos))
 								print(def.name.." is destroyed")
-								cozylights:destroy_light(pos, cozy_items[def.name])
+								cozylights:destroy_light(pos, cozy_items[def.name],def.name)
 							end,
 						})
 					else
@@ -169,7 +151,7 @@ minetest.register_on_mods_loaded(function()
 							on_destruct = function(pos)
 								print(cozylights:dump(pos))
 								print(def.name.." is destroyed1")
-								cozylights:destroy_light(pos, cozy_items[def.name])
+								cozylights:destroy_light(pos, cozy_items[def.name],def.name)
 							end,
 						})
 					end
@@ -184,7 +166,7 @@ minetest.register_on_mods_loaded(function()
 							use_texture_alpha= def.use_texture_alpha or "clip",
 							on_construct = function(pos)
 								base_on_construct(pos)
-								cozylights:draw_node_light(pos, cozy_items[def.name])
+								cozylights:draw_node_light(pos, cozy_items[def.name],def.name)
 							end,
 						})
 					else
@@ -196,7 +178,7 @@ minetest.register_on_mods_loaded(function()
 							light_source = light,
 							use_texture_alpha= def.use_texture_alpha or "clip",
 							on_construct = function(pos)
-								cozylights:draw_node_light(pos, cozy_items[def.name])
+								cozylights:draw_node_light(pos, cozy_items[def.name],def.name)
 							end,
 						})
 					end
@@ -208,6 +190,60 @@ minetest.register_on_mods_loaded(function()
 	cozylights.cozy_items = cozy_items
 	cozylights.cozycids_sunlight_propagates = cozycids_sunlight_propagates
 	cozylights.cozycids_light_sources = cozycids_light_sources
+
+	--hoes in particular
+    for name, def in pairs(minetest.registered_items) do
+        local is_hoe = false
+        if def.groups and def.groups.hoe then
+            is_hoe = true
+        elseif string.find(name, "hoe") then
+            is_hoe = true
+        end
+        if is_hoe then
+            if def.on_use then
+                local orig_on_use = def.on_use
+                minetest.override_item(name, {
+                    on_use = function(itemstack, user, pointed_thing)
+                        if pointed_thing and pointed_thing.type == "node" then
+                            local p_above = {x = pointed_thing.under.x, y = pointed_thing.under.y + 1, z = pointed_thing.under.z}
+                            local above_node = cozylights.get_node(p_above)
+                            if above_node and string.find(above_node.name, "cozylights:light", 1, true) then
+                                minetest.remove_node(p_above)
+								cozylights:push_area_queue(p_above, p_above, nil)
+                            end
+                        end
+                        return orig_on_use(itemstack, user, pointed_thing)
+                    end
+                })
+            end
+            if def.on_place then
+                local orig_on_place = def.on_place
+                minetest.override_item(name, {
+                    on_place = function(itemstack, placer, pointed_thing)
+                        if pointed_thing and pointed_thing.type == "node" then
+                            local p_above = {x = pointed_thing.under.x, y = pointed_thing.under.y + 1, z = pointed_thing.under.z}
+                            local above_node = cozylights.get_node(p_above)
+                            if above_node and string.find(above_node.name, "cozylights:light", 1, true) then
+                                minetest.remove_node(p_above)
+								cozylights:push_area_queue(p_above, p_above, nil)
+                            end
+                        end
+                        return orig_on_place(itemstack, placer, pointed_thing)
+                    end
+                })
+            end
+        end
+    end
+	-- more or less fast light rebuild
+	cozylights.rebuild_bounds = {}
+	for name, item in pairs(cozylights.cozy_items) do
+		local r, _ = cozylights:calc_dims(name,item)
+		local bound = math.max(15, math.floor(r / 15 + 0.5) * 15)
+		if not cozylights.rebuild_bounds[bound] then
+			cozylights.rebuild_bounds[bound] = {}
+		end
+		table.insert(cozylights.rebuild_bounds[bound], name)
+	end
 end)
 
 --clean up possible stale wielded light on join, since on server shutdown we cant execute on_leave
@@ -240,14 +276,26 @@ function cozylights:on_join_cleanup(pos, radius)
 	vm:write_to_map()
 end
 
+local hash_pos = cozylights.hash_pos
+
 minetest.register_on_joinplayer(function(player)
 	if not player then return end
 	local pos = vector.round(player:getpos())
 	pos.y = pos.y + 1
 	cozylights:on_join_cleanup(pos, 30)
+	local meta = player:get_meta()
+	if meta:get_int("cozylights_manual_issued") == 0 then
+		local inv = player:get_inventory()
+		if inv:room_for_item("main", "cozylights:alpha_manual") then
+			inv:add_item("main", "cozylights:alpha_manual")
+			meta:set_int("cozylights_manual_issued", 1)
+		else
+			minetest.log("warning", "[cozylights] Failed to issue alpha manual to " .. player:get_player_name() .. " - Inventory saturated.")
+		end
+	end
 	cozylights.cozyplayers[player:get_player_name()] = {
 		name=player:get_player_name(),
-		pos_hash=pos.x + (pos.y)*100 + pos.z*10000,
+		pos_hash=hash_pos(pos),
 		wielded_item=0,
 		last_pos=pos,
 		last_wield="",
@@ -262,7 +310,6 @@ minetest.register_on_joinplayer(function(player)
 		}
 	}
 end)
-
 minetest.register_on_leaveplayer(function(player)
 	if not player then return end
 	local name = player:get_player_name()
@@ -323,12 +370,10 @@ local function build_lights_after_generated(minp, maxp, sources)
 	if sources then
 		for i=1, #sources do
 			local s = sources[i]
-			-- Robust zero-allocation spatial hash
-			local hash = (s.pos.z + 32768) * 4294967296 + (s.pos.y + 32768) * 65536 + (s.pos.x + 32768)
-
+			local hash = hash_pos(s.pos)
 			if not recently_updated[hash] then
 				recently_updated[hash] = true
-				cozylights:draw_node_light(s.pos, s.cozy_item, vm, a, data, param2data)
+				cozylights:draw_node_light(s.pos, s.cozy_item, s.cozy_item.name, vm, a, data, param2data)
 			end
 		end
 	else
@@ -337,17 +382,14 @@ local function build_lights_after_generated(minp, maxp, sources)
 			local cid = data[i]
 			if cozycids_light_sources[cid] then
 				local p = a:position(i)
-				-- Robust zero-allocation spatial hash
-				local hash = (p.z + 32768) * 4294967296 + (p.y + 32768) * 65536 + (p.x + 32768)
-
+				local hash = hash_pos(p)
 				if not recently_updated[hash] then
 					recently_updated[hash] = true
-
-					local cozy_item = cozylights.cozy_items[minetest.get_name_from_content_id(cid)]
-					local radius, _ = cozylights:calc_dims(cozy_item)
-
+					local name = minetest.get_name_from_content_id(cid)
+					local cozy_item = cozylights.cozy_items[name]
+					local radius, _ = cozylights:calc_dims(name, cozy_item)
 					if a:containsp(vector.subtract(p,radius)) and a:containsp(vector.add(p,radius)) then
-						cozylights:draw_node_light(p,cozy_item,vm,a,data,param2data)
+						cozylights:draw_node_light(p,cozy_item,cozy_item.name,vm,a,data,param2data)
 					else
 						table.insert(cozylights.single_light_queue, { pos=p, cozy_item=cozy_item })
 					end
@@ -415,7 +457,7 @@ local function on_brush_hold(player,cozyplayer,pos,t)
 	if nodedefunder.buildable_to == true then
 		above.y = above.y - 1
 	end
-	local above_hash = above.x + (above.y)*100 + above.z*10000
+	local above_hash = hash_pos(above)
 	if above_hash ~= lb.pos_hash or lb.mode == 2 or lb.mode == 4 or lb.mode == 5 then
 		lb.pos_hash = above_hash
 		cozylights:draw_brush_light(above, lb)
@@ -444,7 +486,7 @@ minetest.register_globalstep(function(dtime)
 				local wield_name = player:get_wielded_item():get_name()
 				-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
 				-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving
-				local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
+				local pos_hash = hash_pos(pos)
 				if pos_hash == cozyplayer.pos_hash and cozyplayer.last_wield == wield_name then
 					goto next_player
 				end
@@ -455,7 +497,8 @@ minetest.register_globalstep(function(dtime)
 						cozyplayer.last_pos,
 						cozylights.cozy_items[wield_name],
 						vel,
-						cozyplayer
+						cozyplayer,
+						wield_name
 					)
 				else
 					cozylights:wielded_light_cleanup(player,cozyplayer,cozyplayer.last_wield_radius or 0)
@@ -514,7 +557,7 @@ minetest.register_globalstep(function(dtime)
 				pos.y = pos.y + 1
 				-- simple hash, collision will result in a rare minor barely noticeable glitch if a user teleports:
 				-- if in collision case right after teleport the player does not move, wielded light wont work until the player starts moving
-				local pos_hash = pos.x + (pos.y)*100 + pos.z*10000
+				local pos_hash = hash_pos(pos)
 				if pos_hash == cozyplayer.pos_hash then
 					goto next_player
 				end
@@ -556,7 +599,7 @@ minetest.register_on_generated(function(minp, maxp)
 	for _, p in pairs(light_sources) do
 		local name = cozylights.get_node(p).name--get_name_from_content_id(cid)
 		local cozy_item = cozylights.cozy_items[name]
-		local radius, _ = cozylights:calc_dims(cozy_item)
+		local radius, _ = cozylights:calc_dims(name, cozy_item)
 		local min_rad = vector.subtract(p,radius)
 		local max_rad = vector.add(p,radius)
 		if a:containsp(min_rad) and a:containsp(max_rad) then
@@ -599,55 +642,6 @@ minetest.register_on_generated(function(minp, maxp)
 		cozylights:push_area_queue(minp_exp, maxp_exp, sources)
 	end
 end)
---hoes in particular
-minetest.register_on_mods_loaded(function()
-    for name, def in pairs(minetest.registered_items) do
-        local is_hoe = false
-        if def.groups and def.groups.hoe then
-            is_hoe = true
-        elseif string.find(name, "hoe") then
-            is_hoe = true
-        end
-        if is_hoe then
-            if def.on_use then
-                local orig_on_use = def.on_use
-                minetest.override_item(name, {
-                    on_use = function(itemstack, user, pointed_thing)
-                        if pointed_thing and pointed_thing.type == "node" then
-                            local p_above = {x = pointed_thing.under.x, y = pointed_thing.under.y + 1, z = pointed_thing.under.z}
-                            local above_node = cozylights.get_node(p_above)
-                            if above_node and string.find(above_node.name, "cozylights:light", 1, true) then
-                                minetest.remove_node(p_above)
-                                if cozylights and cozylights.area_queue then
-									cozylights:push_area_queue(p_above, p_above, nil)
-                                end
-                            end
-                        end
-                        return orig_on_use(itemstack, user, pointed_thing)
-                    end
-                })
-            end
-            if def.on_place then
-                local orig_on_place = def.on_place
-                minetest.override_item(name, {
-                    on_place = function(itemstack, placer, pointed_thing)
-                        if pointed_thing and pointed_thing.type == "node" then
-                            local p_above = {x = pointed_thing.under.x, y = pointed_thing.under.y + 1, z = pointed_thing.under.z}
-                            local above_node = cozylights.get_node(p_above)
-                            if above_node and string.find(above_node.name, "cozylights:light", 1, true) then
-                                minetest.remove_node(p_above)
-                                if cozylights and cozylights.area_queue then
-									cozylights:push_area_queue(p_above, p_above, nil)
-                                end
-                            end
-                        end
-                        return orig_on_place(itemstack, placer, pointed_thing)
-                    end
-                })
-            end
-        end
-    end
-end)
 
 --does everything except for generation that requires to check for air first
 --still investigating the viability of all options considering other mods behavior
@@ -679,4 +673,59 @@ end)
 	end
 end)]]
 
+-- when we dig the ground near a light_source
+minetest.register_on_dignode(function(pos, oldnode, digger)
+	if oldnode.name == "air" or minetest.registered_nodes[oldnode.name].drawtype == "liquid" then
+		return
+	end
+	if cozylights.cozycids_light_sources[minetest.get_content_id(oldnode.name)] then
+		return
+	end
+	cozylights:update_aperture(pos)
+end)
 
+-- to update light maps when an obstruction is placed
+minetest.register_on_placenode(function(pos, newnode, placer, oldnode, itemstack, pointed_thing)
+	local nodedef = minetest.registered_nodes[newnode.name]
+	if newnode.name == "air" or (nodedef and nodedef.drawtype == "liquid") then
+		return
+	end
+	if cozylights.cozycids_light_sources[minetest.get_content_id(newnode.name)] then
+		return
+	end
+	local sources_to_rebuild = {}
+	for bound, nodenames in pairs(cozylights.rebuild_bounds) do
+		local s_minp = vector.subtract(pos, bound)
+		local s_maxp = vector.add(pos, bound)
+		local found = cozylights.find_nodes_in_area(s_minp, s_maxp, nodenames)
+		for i = 1, #found do
+			local source_pos = found[i]
+			local node = cozylights.get_node(source_pos)
+			local cozy_item = cozylights.cozy_items[node.name]
+			if cozy_item then
+				local radius, _ = cozylights:calc_dims(node.name,cozy_item)
+				local V = vector.subtract(pos, source_pos)
+				local D_sq = V.x*V.x + V.y*V.y + V.z*V.z
+				if D_sq <= radius * radius and D_sq > 0 then
+					sources_to_rebuild[#sources_to_rebuild + 1] = {
+						pos = source_pos,
+						cozy_item = cozy_item
+					}
+				end
+			end
+		end
+	end
+	if #sources_to_rebuild > 0 then
+		local tx_locks = {}
+		for i = 1, #sources_to_rebuild do
+			local hash = hash_pos(sources_to_rebuild[i].pos)
+			tx_locks[hash] = true
+		end
+		for i = 1, #sources_to_rebuild do
+			local src = sources_to_rebuild[i]
+			cozylights:destroy_light(src.pos, src.cozy_item,src.cozy_item.name, tx_locks)
+			cozylights.single_light_queue[#cozylights.single_light_queue + 1] = src
+		end
+		cozylights:rebuild_light()
+	end
+end)

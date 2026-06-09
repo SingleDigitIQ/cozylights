@@ -1,4 +1,5 @@
 local mf = math.floor
+local hash_pos = cozylights.hash_pos
 
 local function on_secondary_use(user)
 	local lb = cozylights.cozyplayers[user:get_player_name()].lbrush
@@ -60,7 +61,7 @@ minetest.register_tool("cozylights:light_brush", {
 			if nodenameunder ~= "air" and nodedefunder.buildable_to == true then
 				above.y = above.y - 1
 			end
-			local above_hash = above.x + above.y * 100 + above.z * 10000
+			local above_hash = hash_pos(above)
 			lb.pos_hash = above_hash
 			cozylights:draw_brush_light(pointed_thing.above, lb)
 		end

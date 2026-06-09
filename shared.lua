@@ -135,39 +135,61 @@ function cozylights:get_sphere_surface(radius, sliced)
 	end
 end
 
-function cozylights:calc_dims(cozy_item)
-	local brightness_mod = 0
-	local reach_mod = 0
-	local dim_mod = 0
-	if cozy_item.modifiers ~= nil then
-		brightness_mod = cozylights.coziest_table[cozy_item.modifiers].brightness
-		reach_mod = cozylights.coziest_table[cozy_item.modifiers].reach_factor
-		dim_mod = cozylights.coziest_table[cozy_item.modifiers].dim_factor
+cozylights.gradient_cache = {}
+function cozylights:invalidate_gradient_cache()
+	cozylights.gradient_cache = {}
+end
+
+function cozylights:calc_dims(item_name, cozy_item)
+	local cached = cozylights.gradient_cache[item_name]
+	if cached then
+		return cached.radius, cached.dim_levels
 	end
-	local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod)
-	local r = mf(max_light * max_light / 10 * (cozylights.reach_factor + reach_mod))
-	--print("initial r: "..r)
-	local r_max = 0
+	local L = cozy_item.light_source or 0
+	if L < 1 then
+		L = 1
+	elseif L > 14 then
+		L = 14
+	end
+	local t = L / 14.0
+	local strength = cozylights.global_strength * (t * (2.0 - t))
+	strength = math.max(0, math.min(1, strength))
+	local radius = math.max(1, math.floor(cozylights.global_radius * (t * t)))
+	local brightness = L
 	local dim_levels = {}
-	local dim_factor = cozylights.dim_factor + dim_mod
-	for i = r, 1, -1 do
-		local dim = math.sqrt(math.sqrt(i)) * dim_factor
-		local light_i = max_light + 1 - mf(dim)
-		if light_i < 1 then
-			--light_i = 1
-			r_max = i
-		else
-			if light_i > 14 then
-				light_i = 14
+	local even = (strength >= 0.99)
+	local scaled_strength = strength * 5.0
+	local effective_radius = 1
+	dim_levels[1] = brightness
+	if not even then
+		for i = 2, radius do
+			local dim = math.sqrt(math.sqrt(i)) * (6.0 - scaled_strength)
+			local light_i = math.floor(brightness - dim)
+			if light_i > 0 then
+				dim_levels[i] = light_i > 14 and 14 or light_i
+				effective_radius = i
+			else
+				dim_levels[i] = 1
+				effective_radius = i - 1
+				break
 			end
-			dim_levels[i] = light_i
 		end
+	else
+		for i = 2, radius do
+			dim_levels[i] = brightness
+		end
+		effective_radius = radius
 	end
-	-- we cut the r only if max_r found is lower than r, so that we keep the ability to have huge radiuses
-	if r_max > 0 and r_max < r then
-		return r_max - 1, dim_levels
+	cozylights.gradient_cache[item_name] = {
+		radius = effective_radius,
+		dim_levels = dim_levels,
+	}
+	-- prealloc hack that is supposed to work
+	cozylights:get_sphere_surface(effective_radius)
+	if effective_radius < 30 then
+		cozylights:get_sphere_surface(effective_radius, true)
 	end
-	return r, dim_levels
+	return effective_radius, dim_levels
 end
 
 local cozycids_sunlight_propagates = {}
