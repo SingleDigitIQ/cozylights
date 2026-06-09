@@ -8,8 +8,6 @@ cozylights = {
 	global_strength = tonumber(minetest.settings:get("cozylights_global_strength")) or 0.5,
 
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
-	reach_factor = tonumber(minetest.settings:get("cozylights_reach_factor")) or 2,
-	dim_factor = tonumber(minetest.settings:get("cozylights_dim_factor")) or 9.5,
 	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.03,
 	brush_hold_step = tonumber(minetest.settings:get("cozylights_brush_hold_step")) or 0.07,
 	on_gen_step = tonumber(minetest.settings:get("cozylights_on_gen_step")) or 0.7,

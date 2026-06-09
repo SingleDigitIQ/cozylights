@@ -33,8 +33,8 @@ Makes all cozy light nodes visible and interactable. You can basically build lig
 Makes all cozy light nodes invisible and non-interactable again.
 <style color=#00FFFF>/optimizeformobile</style> <style color=#AAAAAA>[number]</style>
 Removes all cozy light nodes which do not touch a surface of a visible node (like cobble). The default algorithm spreads light in a sphere and lights up the air, which might cause FPS drops on potato devices/mobile. Good for multiplayer schematics, though it might make some places darker.
-<style color=#00FFFF>/spawnlight</style> <style color=#AAAAAA>[brightness] [reach] [dim]</style>
-Spawns a light at your position which does not use the user-friendly light brush algorithm, but the raw ambient light algorithm.
+<style color=#00FFFF>/spawnlight</style> <style color=#AAAAAA>[brightness] [radius] [strength]</style>
+Spawns a light at your position which uses user-friendly light brush algorithm.
 <style color=#00FFFF>/daynightratio</style> <style color=#AAAAAA>[ratio float]</style>
 Changes the engine day_night_ratio for your player. 0 is the darkest night possible (very moody, helps with building/testing). 1 is the brightest day.
 <style color=#00FFFF>/cozyadjust</style> <style color=#AAAAAA>[size] [adjust_by] [keep_map]</style>
