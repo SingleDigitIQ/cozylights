@@ -230,7 +230,7 @@ end
 
 local VOXEL_SQ_RADIUS = (math.sqrt(3) / 2) ^ 2 * 1.5
 
-function cozylights:update_aperture(pos_broken)
+function cozylights:update_cone(pos_broken)
 	local t = os.clock()
 	local posrebuilds = {}
 	for bound, nodenames in pairs(cozylights.rebuild_bounds) do
