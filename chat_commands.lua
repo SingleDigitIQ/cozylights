@@ -367,38 +367,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end
 end)
 
-local cozysettings = {
-	params = "<brightness> <reach_factor> <dim_factor>",
-	privs = {},
-	description = "changes global ambient light settings",
-	func = function(_, param)
-		local brightness_, reach_factor_, dim_factor_ =
-			string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
-		brightness_ = tonumber(brightness_)
-		if brightness_ ~= nil then
-			cozylights.brightness_factor = brightness_
-			minetest.settings:set("cozylights_brightness_factor", brightness_)
-		end
-		reach_factor_ = tonumber(reach_factor_)
-		if reach_factor_ ~= nil then
-			cozylights.reach_factor = reach_factor_
-			minetest.settings:set("cozylights_reach_factor", reach_factor_)
-		end
-		dim_factor_ = tonumber(dim_factor_)
-		if dim_factor_ ~= nil then
-			cozylights.dim_factor = dim_factor_
-			minetest.settings:set("cozylights_dim_factor", dim_factor_)
-		end
-		return true,
-			"set brightness as "
-				.. brightness_
-				.. ", reach_factor as "
-				.. reach_factor_
-				.. ", dim_factor as "
-				.. dim_factor_
-	end,
-}
-
 local daynightratio = {
 	params = "<ratio>",
 	description = "fixes old schematic torches alignment to walls and what not",

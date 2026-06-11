@@ -193,7 +193,7 @@ function cozylights:calc_dims(item_name, cozy_item)
 end
 
 local cozycids_sunlight_propagates = {}
--- ensure cozy position in memory
+-- attempt cozy position
 -- default amount of lights sources: 194
 -- in default game with moreblocks mod: 5134
 --cozylights:prealloc(cozycids_sunlight_propagates, 194, true)
@@ -240,7 +240,7 @@ function cozylights:lightcast(pos, dir, radius, data, param2data, a, dim_levels)
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				local dim = (dim_levels[i] - light_nerf) >= 1 and (dim_levels[i] - light_nerf) or 1
 				local light = c_lights[dim]
 				if light > cid or param2data[idx] == 0 then
@@ -264,7 +264,7 @@ function cozylights:lightcast_erase(pos, dir, radius, data, param2data, a, dim_l
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid >= c_light1 and cid <= c_light14 then
+			if cid >= c_light1 and cid <= c_light_debug14 then
 				local dim = (dim_levels[i] - light_nerf) >= 0 and (dim_levels[i] - light_nerf) or 0
 				local light = dim > 0 and c_lights[dim] or c_air
 				if light < cid then
@@ -288,7 +288,7 @@ function cozylights:lightcast_override(pos, dir, radius, data, param2data, a, di
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				data[idx] = c_lights[dim]
 				param2data[idx] = dim
@@ -309,7 +309,7 @@ function cozylights:lightcast_lighten(pos, dir, radius, data, param2data, a, dim
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				if c_lights[dim] > cid then
 					local original_light = cid - c_light1
@@ -334,7 +334,7 @@ function cozylights:lightcast_darken(pos, dir, radius, data, param2data, a, dim_
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid >= c_light1 and cid <= c_light14 then
+			if cid >= c_light1 and cid <= c_light_debug14 then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				if c_lights[dim] < cid then
 					local original_light = cid - c_light1
@@ -359,7 +359,7 @@ function cozylights:lightcast_blend(pos, dir, radius, data, param2data, a, dim_l
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
 				local original_light = cid - c_light1 --param2data[idx]
 				dim = mf((dim + original_light) / 2 + 0.5)
@@ -406,7 +406,7 @@ function cozylights:lightcast_fix_edges(pos, dir, radius, data, param2data, a, d
 		if not cozycids_sunlight_propagates[cid] then
 			break
 		end
-		if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+		if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 			local dim = dim_levels[i] - light_nerf
 			dim = dim > 0 and dim or 1
 			local light = c_lights[dim]
@@ -469,7 +469,7 @@ function cozylights:lightcast_erase_fix_edges(pos, dir, radius, data, param2data
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid >= c_light1 and cid <= c_light14 then
+			if cid >= c_light1 and cid <= c_light_debug14 then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true
@@ -523,7 +523,7 @@ function cozylights:lightcast_override_fix_edges(pos, dir, radius, data, param2d
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true
@@ -571,7 +571,7 @@ function cozylights:lightcast_lighten_fix_edges(pos, dir, radius, data, param2da
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true
@@ -627,7 +627,7 @@ function cozylights:lightcast_darken_fix_edges(pos, dir, radius, data, param2dat
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true
@@ -683,7 +683,7 @@ function cozylights:lightcast_blend_fix_edges(pos, dir, radius, data, param2data
 		local cid = data[idx]
 		if cozycids_sunlight_propagates[cid] == true then
 			-- appears that hash lookup in a loop is as bad as math
-			if cid == c_air or (cid >= c_light1 and cid <= c_light14) then
+			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				if i < halfrad then
 					if not visited_pos[idx] then
 						visited_pos[idx] = true
