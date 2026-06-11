@@ -262,11 +262,12 @@ function cozylights:draw_brush_light(pos, lb)
 	local ylvl = 1
 	local cid = data[a:index(pos.x, pos.y - 1, pos.z)]
 	local cida = data[a:index(pos.x, pos.y + 1, pos.z)]
+	local c_light_debug14 = c_lights[14] + 14
 	if cid and cida then
 		if
-			(cid == c_air or (cid >= c_lights[1] and cid <= c_lights[14]))
+			(cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
 			and cida ~= c_air
-			and (cida < c_lights[1] or cida > c_lights[14])
+			and (cida < c_lights[1] or cida > c_light_debug14)
 		then
 			ylvl = -1
 		end

@@ -2,11 +2,7 @@
 
 https://github.com/user-attachments/assets/d5be20a0-8170-4ea5-b28e-a35e80f863c4
 
-
-
 https://github.com/user-attachments/assets/3c8c131a-f3e3-43fa-ab59-9ad290defee7
-
-
 
 # Cozy Lights
 
@@ -20,11 +16,7 @@ Early alpha, but at least NotSoWow, Sumi, MisterE, Agura and Sharp have expresse
 
 ![cozy nodecore](https://raw.githubusercontent.com/SingleDigitIQ/media/main/cozy_nodecore.gif)
 
-Voxel light maps are a complete game changer - it is almost like going from 2d to 3d in terms of depth. You now have 14 shades for every visible building block, and it does not have to register 14 versions of every building block. Cobble only challenge has got a whole lot easier, something fun to look at with the least fun texture is possible now with just this mod :> Disabling smooth lighting might can make for an interesting aesthetic in some cases.
-
-You can also build these lights just like you do with any structures, in other words, place invisible blocks of light of all possible engine light levels block-by-block. Tools are coming soon to make this process more user-friendly, right now you will need to make them visible and interactable in debug mode.
-
-It is eventually supposed to become accurate enough so that if you learn how to draw, you will have an easier time understanding how depth and shadows work and what can be done with them.
+Buildable voxel light maps are a complete game changer - it is almost like going from 2d to 3d in terms of depth. You now have 14 shades for every visible building block, and it does not have to register 14 versions of every building block. Cobble only challenge has got a whole lot easier, something fun to look at with the least fun texture is possible now with just this mod :> Disabling smooth lighting might can make for an interesting aesthetic in some cases.
 
 **Cozy wielded light:**
 
@@ -32,7 +24,7 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 **WARNING:**
 
-**1. after removing Cozy Lights from your world you will be left with spheres of unknown nodes. Easiest could be to reenable the mod and call ```/clearlights``` in all locations Cozy Lights are active.**
+**1. after removing Cozy Lights from your world you will be left with spheres of unknown nodes. Easiest could be to reenable the mod, type ```/uncozymode``` and visit all locations Cozy Lights are active.**
 
 **2. if you have override_engine_lights enabled, then in case you ever remove Cozy Lights mod from your world, you will be left with broken lights. To fix it, you will need to use the mod fixmap or anything that updates/fixes engine lights. override_engine_lights is disabled by default, so it should be safe.**
 
@@ -44,9 +36,7 @@ It is eventually supposed to become accurate enough so that if you learn how to 
 
 3. Can crash your server with out of memory error if you are too potato. Typical limit is about 1-2 GB for LuaJIT because of how it uses 32bit virtual registers or something, and in some cases it can be exceeded, especially in multiplayer, or with very particular mods that place too many light sources on the map.
 
-4. /uncozymode does not work reliably and can crash with out of memory error
-
-5. In case you have adjusted global_radius in /cozysettings or /zs and its now lower than the previous, light clearance for older lights wont work correctly, you will have to /clearlights manually
+4. See if there is redundant rebuild lights when a new light source is placed
 
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
@@ -137,6 +127,18 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - with new accurate algo brush in any mode other than default probably functions incorrectly
 
+- Needs to utilize mod storage to save light_source info like radius, so that it will be easier to destroy and rebuild lights, and also search for them, and also,
+will give us an option not to generate all cozylights, for example only generate lights within 100 blocks distance and ignore the rest, which is super important
+since the engine generation does too much all the time. This is also the fix to the problem when in case you have adjusted global_radius in /cozysettings or /zs and its now lower than the previous, light clearance for older lights wont work correctly, you will have to /clearlights manually
+
+- Amanatides and Woo is too much for voxel reality. There needs to be something else entirely to eliminate redundant iterations over same voxels.
+
+- Still need to have /disableongen for multiplayer servers and potatoes. Also put all commands behind a permission gate
+
+- Still need to investigate chess order and every other one order for cozylights generation for potatoes
+
+- Needs an option that always generates only optimized for mobile versions of everything if that helps at all
+
 - add undo
 
 - add shadow_brush
@@ -144,8 +146,6 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
 
 - save brush settings in item metadata and change icon somehow to resemble the settings
-
-- add /disableongen
 
 - all queues should be saved in case of server shutdown, so they can be resumed
 

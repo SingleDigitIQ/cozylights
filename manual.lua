@@ -33,14 +33,12 @@ Makes all cozy light nodes visible and interactable. You can basically build lig
 Makes all cozy light nodes invisible and non-interactable again.
 <style color=#00FFFF>/optimizeformobile</style> <style color=#AAAAAA>[number]</style>
 Removes all cozy light nodes which do not touch a surface of a visible node (like cobble). The default algorithm spreads light in a sphere and lights up the air, which might cause FPS drops on potato devices/mobile. Good for multiplayer schematics, though it might make some places darker.
-<style color=#00FFFF>/spawnlight</style> <style color=#AAAAAA>[brightness] [radius] [strength]</style>
-Spawns a light at your position which uses user-friendly light brush algorithm.
 <style color=#00FFFF>/daynightratio</style> <style color=#AAAAAA>[ratio float]</style>
 Changes the engine day_night_ratio for your player. 0 is the darkest night possible (very moody, helps with building/testing). 1 is the brightest day.
 <style color=#00FFFF>/cozyadjust</style> <style color=#AAAAAA>[size] [adjust_by] [keep_map]</style>
 Changes the brightness of all cozy light nodes by [adjust_by] in the area of [size]. Can be negative. [keep_map] is 1 by default; if the adjustment pushes a node out of the 1-14 bounds, the command safely reverts to preserve the map. Type 0 for [keep_map] if you are okay with breaking the light map.
 <style color=#00FFFF>/uncozymode</style> <style color=#AAAAAA>[number]</style>
-Currently broken, do not use, use /clearlights instead. Calls clear lights continuously at all players' positions in the area. Disable it by typing /cozymode or via /cozysettings.
+This is when /clearlights is not enough. Stops generating new cozylights and calls clear lights continuously at all players' positions in the area, but slowly overtime, so it wont be realtime, you don't have to wait until the queue catches up with your position, just move around wherever you see cozylights you want to remove. Disable it by typing /cozymode or via /cozysettings.
 <style color=#55FF55 size=18>Shortcuts</style>
 Short versions of commands above:
 <style color=#00FFFF>zcl</style>   - clearlights

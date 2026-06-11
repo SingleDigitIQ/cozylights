@@ -1,6 +1,6 @@
 local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
-
+--let wield_light ignore c_light_debug nodes or things get complicated
 local c_lights = {
 	c_light1,
 	c_light1 + 1,
@@ -222,11 +222,12 @@ function cozylights:draw_wielded_light(
 	local y_above = py + 1
 	local cidb = data[a:index(px, y_below, pz)]
 	local cida = data[a:index(px, y_above, pz)]
+	local c_light_debug14 = c_light14 + 14
 	if cidb and cida then
 		if
-			(cidb == c_air or (cidb >= c_light1 and cidb <= c_light14))
+			(cidb == c_air or (cidb >= c_light1 and cidb <= c_light_debug14))
 			and cida ~= c_air
-			and (cida < c_light1 or cida > c_light14)
+			and (cida < c_light1 or cida > c_light_debug14)
 		then
 			py = py - 1
 		end

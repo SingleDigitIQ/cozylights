@@ -17,6 +17,7 @@ local c_lights = {
 	c_light1 + 12,
 	c_light1 + 13,
 }
+local c_light_debug14 = c_lights[14] + 14
 local hash_pos = cozylights.hash_pos
 local gent_total = 0
 local gent_count = 0
@@ -51,9 +52,9 @@ function cozylights:draw_node_light(pos, cozy_item, cozy_name, vm, a, data, para
 	local cida = data[a:index(pos.x, pos.y + 1, pos.z)]
 	if cid and cida then
 		if
-			(cid == c_air or (cid >= c_lights[1] and cid <= c_lights[14]))
+			(cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
 			and cida ~= c_air
-			and (cida < c_lights[1] or cida > c_lights[14])
+			and (cida < c_lights[1] or cida > c_light_debug14)
 		then
 			ylvl = -1
 		end
@@ -120,9 +121,9 @@ function cozylights:destroy_light(pos, cozy_item, cozy_name, tx_locks)
 	local cida = data[a:index(pos.x, pos.y + 1, pos.z)]
 	if cid and cida then
 		if
-			(cid == c_air or (cid >= c_lights[1] and cid <= c_lights[14]))
+			(cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
 			and cida ~= c_air
-			and (cida < c_lights[1] or cida > c_lights[14])
+			and (cida < c_lights[1] or cida > c_light_debug14)
 		then
 			ylvl = -1
 		end
@@ -135,7 +136,6 @@ function cozylights:destroy_light(pos, cozy_item, cozy_name, tx_locks)
 	local sweep_rad = radius + 1
 	local rad_sq = sweep_rad * sweep_rad
 	local c_light1 = c_lights[1]
-	local c_light_debug14 = c_lights[14] + 14
 	for z = -sweep_rad, sweep_rad do
 		local z_sq = z * z
 		local idx_z = base_idx + z * zstride
@@ -271,9 +271,9 @@ function cozylights:update_cone(pos_broken)
 			if
 				cid
 				and cida
-				and (cid == c_air or (cid >= c_lights[1] and cid <= c_lights[14]))
+				and (cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
 				and cida ~= c_air
-				and (cida < c_lights[1] or cida > c_lights[14])
+				and (cida < c_lights[1] or cida > c_light_debug14)
 			then
 				ylvl = -1
 			end

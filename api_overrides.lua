@@ -3,7 +3,7 @@
 local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
 local c_light14 = c_light1 + 13
-
+local c_light_debug14 = c_light14 + 14
 local core_get_node = minetest.get_node
 local core_get_node_or_nil = minetest.get_node_or_nil
 
@@ -30,7 +30,7 @@ if core_get_node_raw then
 	cozylights.get_node_raw = core_get_node_raw
 	minetest.get_node_raw = function(pos)
 		local cid = core_get_node_raw(pos)
-		if cid >= c_light1 and cid <= c_light14 then
+		if cid >= c_light1 and cid <= c_light_debug14 then
 			return c_air
 		end
 		return cid
@@ -144,24 +144,6 @@ minetest.find_nodes_in_area_under_air = function(minp, maxp, nodenames)
 	return results
 end
 
-local function bulk_clear_cozylights(minp, maxp)
-	local vm = cozylights.get_voxel_manip()
-	local emin, emax = vm:read_from_map(minp, maxp)
-	local data = vm:get_data()
-	local param2data = vm:get_param2_data()
-	for i = 1, #data do
-		local cid = data[i]
-		if cid >= c_light1 and cid <= c_light14 then
-			data[i] = c_air
-			param2data[i] = 0
-		end
-	end
-	vm:set_data(data)
-	vm:set_param2_data(param2data)
-	vm:write_to_map(false)
-	return true
-end
-
 local core_place_schematic = minetest.place_schematic
 minetest.place_schematic = function(pos, schematic, rotation, replacements, force_placement, flags)
 	if not force_placement then
@@ -179,7 +161,7 @@ minetest.place_schematic = function(pos, schematic, rotation, replacements, forc
 		local maxp = { x = pos.x + md, y = pos.y + s_size.y + 1, z = pos.z + md }
 		local lights_present = minetest.find_nodes_in_area(minp, maxp, cozy_lights_names)
 		if #lights_present > 0 then
-			bulk_clear_cozylights(minp, maxp)
+			cozylights:clear(pos, md)
 			cozylights:push_area_queue(minp, maxp, nil)
 		end
 	end
@@ -192,7 +174,7 @@ minetest.spawn_tree = function(pos, treedef)
 	local maxp = { x = pos.x + 5, y = pos.y + 15, z = pos.z + 5 }
 	local lights_present = minetest.find_nodes_in_area(minp, maxp, cozy_lights_names)
 	if #lights_present > 0 then
-		bulk_clear_cozylights(minp, maxp)
+		cozylights:clear(pos, 5)
 		cozylights:push_area_queue(minp, maxp, nil)
 	end
 	return core_spawn_tree(pos, treedef)
