@@ -130,20 +130,11 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - Needs to utilize mod storage to save light_source info like radius, so that it will be easier to destroy and rebuild lights, and also search for them, and also,
 will give us an option not to generate all cozylights, for example only generate lights within 100 blocks distance and ignore the rest, which is super important
 since the engine generation does too much all the time. This is also the fix to the problem when in case you have adjusted global_radius in /cozysettings or /zs and its now lower than the previous, light clearance for older lights wont work correctly, you will have to /clearlights manually
+it will also open the path to /undo implementation for light_brush
+basically maintain files in which you record light source positions, which can be quickly grabbed to rebuild lights if there is a removal
+and give light sources metadata, so when nearby light sources are destroyed you can find and rebuild easily, also give metadata to light brush epicenter for the same reason
 
-- Amanatides and Woo is too much for voxel reality. There needs to be something else entirely to eliminate redundant iterations over same voxels.
-
-- Still need to have /disableongen for multiplayer servers and potatoes. Also put all commands behind a permission gate
-
-- Still need to investigate chess order and every other one order for cozylights generation for potatoes
-
-- Needs an option that always generates only optimized for mobile versions of everything if that helps at all
-
-- add undo
-
-- add shadow_brush
-
-- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
+- make darkness nodes, wielded darkness, Darkness Brush or shadow brush. Maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
 
 - save brush settings in item metadata and change icon somehow to resemble the settings
 
@@ -151,17 +142,23 @@ since the engine generation does too much all the time. This is also the fix to 
 
 - add /ignore certain block
 
+- Amanatides and Woo is too much for voxel reality. There needs to be something
+
+- Still need to have /disableongen for multiplayer servers and potatoes. Also put all commands behind a permission gate
+
+- Still need to investigate chess order and every other one order for cozylightVs generation for potatoes
+
+- Needs an option that always generates only optimized for mobile versions of everything if that helps at all. Add multiplayer/mobile settings(very little light nodes, very simple light map), and mid settings(more or less okayish), max is default
+
 - algo for many adjacent lights
 
 - see what can be done about snow and slabs not passing the light through
 
-- make dropped items emit cozy light if they have light_source above 0, just like in original wielded light mod
+- make dropped items emit cozy lights(but less) if they have light_source above 0, just like in original wielded light mod
 
 - make sure bigger lights wont go unnoticed in on_generated and schematic placement. apparnetly on generated can support lights up to 80 if max area radius is 120
 
-- stress test it with heavily modded worlds, possible problem: luajit ram limit for default luajit on linux?
-
-- illuminate transparent liquids too if possible without making it look weird, except dont make floodable light sources work underwater just like in original wielded light
+- dont make floodable light sources work underwater just like in original wielded light
 
 - fix nodecore dynamic light source not updating the brightness/radius
 
@@ -171,51 +168,31 @@ since the engine generation does too much all the time. This is also the fix to 
 
 - add inventory images for lights and debug lights, make them only available in creative
 
-- make darkness nodes, wielded darkness, Darkness Brush
-
-- add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
-
-- raytracing
-
-- allow people to run cpu and memory-friendly minimal schematic support version, for multiplayer servers for example
-
-- if certain treshold of light source commonality in an area is reached, those light sources should be ignored
-
-- would it be possible without too much work to programatically determine global commonality of a node from mapgen?
-
-- add optional more pleasant day/night cycle
-
-- add optional sky textures
-
-- add multiplayer/mobile settings(very little light nodes, very simple light map), and mid settings(more or less okayish), max is default
-
-- move to base "unsafe" methods for tables? seems like luajit optimizes it all away and it's useless to bother?
-
-- try spread work over several loops and try vector.add
-
-- maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
-
-- lights auto rebuild on first load after settings change?
-
-- make a table for existing decoration nodes
-
-- make sure spheres of big sizes dont miss too many blocks
-
-- give light sources metadata, so when nearby light sources are destroyed you can find and rebuild easily, also give metadata to light brush epicenter for the same reason
-
-- maintain files in which you record light source positions, which can be quickly grabbed to rebuild lights if there is a removal
-
 - add cone light blocks, so those lights can be built on top of each other to make static lights from old games
 
 - add light grabber tool, Light Excavation Tool 9000 TURBO V3, so that the light wont be selectable without it
 
 - add Consumer Grade Reality Bending Device to create preset nodes with chosen qualities
 
-- add global step override api, ability to implement cozylights global step into a game/other mod global step more efficiently, maybe add generic global step call like mainloop or mainstep, see what other games do with it, choose or create convention for this i guess
+- lights auto rebuild on first load after settings change?
 
-- add handle_async where it makes sense
+- raytracing
 
-- ci for optional_depends auto update according to content db mods/games updates and releases
+- Optimize memory usage, use several voxel manipulators for biggest lights, will be slower but much more stable, also increase max radius to even more mentally challenged value
+
+- if certain treshold of light source commonality in an area is reached, those light sources should be ignored
+
+- add optional more pleasant day/night cycle
+
+- add optional sky textures
+
+- move to base "unsafe" methods for tables? seems like luajit optimizes it all away and it's useless to bother?
+
+- try spread work over several loops and try vector.add
+
+- make a table for existing decoration nodes
+
+- add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
 
 ### Some empirical observations about LuaJIT
 

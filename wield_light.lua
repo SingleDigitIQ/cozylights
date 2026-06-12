@@ -86,7 +86,7 @@ local function lightcast_lite(pos, dir, dirs, radius, data, param2data, a, dim_l
 end
 
 function cozylights:wielded_light_cleanup(player, cozyplayer, radius)
-	local pos = vector.round(player:getpos())
+	local pos = vector.round(player:get_pos())
 	local vm = cozylights.get_voxel_manip()
 	local emin, emax
 	local last_pos = cozyplayer.last_pos
