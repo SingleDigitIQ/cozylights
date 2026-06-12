@@ -106,7 +106,7 @@ end
 
 minetest.find_nodes_in_area_under_air = function(minp, maxp, nodenames)
 	local results = core_find_nodes_in_area_under_air(minp, maxp, nodenames)
-	--malformed mobs redo data fix
+	--malformed data fix that some obscure mob mod sends
 	if not minp.y or not maxp.y then
 		return results
 	end
