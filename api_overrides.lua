@@ -106,6 +106,10 @@ end
 
 minetest.find_nodes_in_area_under_air = function(minp, maxp, nodenames)
 	local results = core_find_nodes_in_area_under_air(minp, maxp, nodenames)
+	--malformed data fix that some obscure mob mod sends
+	if not minp.y or not maxp.y then
+		return results
+	end
 	local light_search_min = { x = minp.x, y = minp.y + 1, z = minp.z }
 	local light_search_max = { x = maxp.x, y = maxp.y + 1, z = maxp.z }
 	local light_nodes = minetest.find_nodes_in_area(light_search_min, light_search_max, cozy_lights_names)

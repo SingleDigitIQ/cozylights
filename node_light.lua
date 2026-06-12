@@ -96,17 +96,16 @@ end
 
 -- handle_async?
 function cozylights:rebuild_light()
-	local single_light_queue = cozylights.single_light_queue
+	local single_light_queue = self.single_light_queue
 	if #single_light_queue == 0 then
 		return
 	end
-	print("#single_light_queue is: " .. #single_light_queue)
-	cozylights:draw_node_light(
-		single_light_queue[1].pos,
-		single_light_queue[1].cozy_item,
-		single_light_queue[1].cozy_item.name
-	)
+	local s = single_light_queue[1]
 	table.remove(single_light_queue, 1)
+	if not s.cozy_item then
+		return
+	end
+	self:draw_node_light(s.pos, s.cozy_item, s.cozy_item.name)
 end
 
 function cozylights:destroy_light(pos, cozy_item, cozy_name, tx_locks)

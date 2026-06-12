@@ -27,7 +27,7 @@ local clearlights = {
 	params = "<size>",
 	description = "removes cozy and debug light nodes. max radius is 120 for now",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /clearlights " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -42,7 +42,7 @@ local rebuildlights = {
 	params = "<size>",
 	description = "force rebuilds lights in the area. max radius is 120 for now",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /rebuildlights " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -78,7 +78,7 @@ local fixedges = {
 	params = "<size>",
 	description = "same as rebuild lights but additionally fixes edges for all lights in the area, regardless of always_fix_edges setting. max radius is 120",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /fixedges " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -114,7 +114,7 @@ local cozydebugon = {
 	params = "<size>",
 	description = "replaces cozy light nodes with debug light nodes which are visible and interactable in an area",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /cozydebugon " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -136,7 +136,7 @@ local cozydebugoff = {
 	params = "<size>",
 	description = "replaces debug light nodes back with cozy light nodes in an area",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /cozydebugoff " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -158,7 +158,7 @@ local optimizeformobile = {
 	params = "<size>",
 	description = "optimizes schematic for mobile and potato gpu",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size = tonumber(param) or cozylights.default_size
 		minetest.log("action", name .. " uses /optimizeformobile " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -203,7 +203,7 @@ local spawnlight = {
 	description = "spawns light_brush-like light with given characteristics at player position",
 	func = function(name, param)
 		local brightness, radius, strength = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		minetest.log(
 			"action",
 			name
@@ -372,7 +372,7 @@ local daynightratio = {
 	description = "fixes old schematic torches alignment to walls and what not",
 	func = function(name, param)
 		local player = minetest.get_player_by_name(name)
-		local pos = vector.round(player:getpos())
+		local pos = vector.round(player:get_pos())
 		local ratio = tonumber(param)
 		minetest.log("action", name .. " uses /daynightratio " .. ratio .. " at position: " .. cozylights:dump(pos))
 		if ratio > 1.0 then
@@ -393,7 +393,7 @@ local cozyadjust = {
 		.. "even for one node in the area, the command will revert(have no effect at all), so that light map will be preserved\n"
 		.. "if you are ok with breaking light map, type 0 for third value",
 	func = function(name, param)
-		local pos = vector.round(minetest.get_player_by_name(name):getpos())
+		local pos = vector.round(minetest.get_player_by_name(name):get_pos())
 		local size, adjust_by, keep_map = string.match(param, "^([%d.~-]+)[, ] *([%d.~-]+)[, ] *([%d.~-]+)$")
 		size = mf(tonumber(size) or cozylights.default_size)
 		adjust_by = mf(tonumber(adjust_by) or 1)
@@ -445,7 +445,7 @@ local fixtorches = {
 	description = "fixes old schematic torches alignment to walls and what not",
 	func = function(name, param)
 		local placer = minetest.get_player_by_name(name)
-		local pos = vector.round(placer:getpos())
+		local pos = vector.round(placer:get_pos())
 		local size = mf(tonumber(param) or cozylights.default_size)
 		minetest.log("action", name .. " uses /fixtorches " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -502,7 +502,7 @@ local uncozymode = {
 		.. "Useful before Cozy Lights uninstall or for those who is uncertain about the mod.\n",
 	func = function(name, param)
 		local placer = minetest.get_player_by_name(name)
-		local pos = vector.round(placer:getpos())
+		local pos = vector.round(placer:get_pos())
 		local size = mf(tonumber(param) or cozylights.default_size)
 		minetest.log("action", name .. " uses /uncozymode " .. size .. " at position: " .. cozylights:dump(pos))
 		if size > 120 then
@@ -518,7 +518,7 @@ local cozymode = {
 	description = "stops /uncozymode.",
 	func = function(name)
 		local placer = minetest.get_player_by_name(name)
-		local pos = vector.round(placer:getpos())
+		local pos = vector.round(placer:get_pos())
 		minetest.log("action", name .. " uses /cozymode at position: " .. cozylights:dump(pos))
 		cozylights.uncozy_mode = 0
 		minetest.settings:set("cozylights_uncozy_mode", 0)

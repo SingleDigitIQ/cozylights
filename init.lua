@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.2.10",
+	version = "0.3.1",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	global_brightness = tonumber(minetest.settings:get("cozylights_global_brightness")) or 12,
 	global_radius = tonumber(minetest.settings:get("cozylights_global_radius")) or 15,
@@ -269,7 +269,7 @@ minetest.register_on_joinplayer(function(player)
 	if not player then
 		return
 	end
-	local pos = vector.round(player:getpos())
+	local pos = vector.round(player:get_pos())
 	pos.y = pos.y + 1
 	cozylights:on_join_cleanup(pos, 30)
 	local meta = player:get_meta()
@@ -328,30 +328,55 @@ local agent_total = 0
 local agent_count = 0
 cozylights.recently_updated = {}
 
+local MAX_QUEUE_VOLUME = 32768
+
 function cozylights:push_area_queue(minp, maxp, sources)
 	local queue = self.area_queue
-	local area_hash = minp.x + (minp.y * 100) + (minp.z * 10000)
-	if self.recently_updated[area_hash] then
-		return false
-	end
 	for i = 1, #queue do
 		local q = queue[i]
 		if
-			minp.x <= q.maxp.x
-			and maxp.x >= q.minp.x
-			and minp.y <= q.maxp.y
-			and maxp.y >= q.minp.y
-			and minp.z <= q.maxp.z
-			and maxp.z >= q.minp.z
+			minp.x >= q.minp.x
+			and maxp.x <= q.maxp.x
+			and minp.y >= q.minp.y
+			and maxp.y <= q.maxp.y
+			and minp.z >= q.minp.z
+			and maxp.z <= q.maxp.z
 		then
+			if sources then
+				q.sources = q.sources or {}
+				for s = 1, #sources do
+					q.sources[#q.sources + 1] = sources[s]
+				end
+			end
 			return false
 		end
+		local merged_min = {
+			x = math.min(minp.x, q.minp.x),
+			y = math.min(minp.y, q.minp.y),
+			z = math.min(minp.z, q.minp.z),
+		}
+		local merged_max = {
+			x = math.max(maxp.x, q.maxp.x),
+			y = math.max(maxp.y, q.maxp.y),
+			z = math.max(maxp.z, q.maxp.z),
+		}
+		local merged_vol = (merged_max.x - merged_min.x + 1)
+			* (merged_max.y - merged_min.y + 1)
+			* (merged_max.z - merged_min.z + 1)
+		if merged_vol <= MAX_QUEUE_VOLUME then
+			q.minp = merged_min
+			q.maxp = merged_max
+			if sources then
+				q.sources = q.sources or {}
+				for s = 1, #sources do
+					q.sources[#q.sources + 1] = sources[s]
+				end
+			end
+			return true
+		end
 	end
-	queue[#queue + 1] = {
-		minp = minp,
-		maxp = maxp,
-		sources = sources,
-	}
+	local new_job = { minp = minp, maxp = maxp, sources = sources }
+	queue[#queue + 1] = new_job
 	return true
 end
 
@@ -501,7 +526,7 @@ minetest.register_globalstep(function(dtime)
 			for _, cozyplayer in pairs(cozylights.cozyplayers) do
 				local t = os.clock()
 				local player = minetest.get_player_by_name(cozyplayer.name)
-				local pos = vector.round(player:getpos())
+				local pos = vector.round(player:get_pos())
 				pos.y = pos.y + 1
 				local wield_name = player:get_wielded_item():get_name()
 				local current_is_light = (cozylights.cozy_items[wield_name] ~= nil)
@@ -558,7 +583,7 @@ minetest.register_globalstep(function(dtime)
 		for _, cozyplayer in pairs(cozylights.cozyplayers) do
 			local t = os.clock()
 			local player = minetest.get_player_by_name(cozyplayer.name)
-			local pos = vector.round(player:getpos())
+			local pos = vector.round(player:get_pos())
 			pos.y = pos.y + 1
 			local wield_name = player:get_wielded_item():get_name()
 			--todo: checking against a string is expensive, what do
@@ -590,7 +615,7 @@ minetest.register_globalstep(function(dtime)
 		else
 			for _, cozyplayer in pairs(cozylights.cozyplayers) do
 				local player = minetest.get_player_by_name(cozyplayer.name)
-				local pos = vector.round(player:getpos())
+				local pos = vector.round(player:get_pos())
 				pos.y = pos.y + 1
 				local last_pos = cozyplayer.last_uncozy_pos or vector.new(0, -9999, 0)
 				local dist = vector.distance(pos, last_pos)
