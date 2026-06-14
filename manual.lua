@@ -3,19 +3,18 @@ local manual_content = [[
 <center><style color=#F5A623 size=20>CozyLights Alpha Reference</style></center>
 
 <style color=#F52023>Warning: This wasn't supposed to be possible in pure Lua and is a proof-of-concept alpha build full of experiments that may not always work as intended and will be subject to breaking changes.
-In case you are new to unstable Luanti mods, and want to remove this mod from your world, to avoid inconvenience, you have two options:
+In case you are new to unstable Luanti mods, and want to remove this mod from your world, to avoid inconvenience, you have three options:
 1. use unknown_node cleaner mods after cozylights mod is disabled, such as: https://content.luanti.org/packages/AntumDeluge/cleaner/ or https://content.luanti.org/packages/AiTechEye/servercleaner/
 </style>
-2. second option currently might not work correctly with some mapgens, but just in case run /clearlights in areas where cozylights were generated and only then disable the mod, in case you forgot an area, you can reenable the mod to run /clearlights again
+2. second option is running /clearlights in areas where cozylights were generated and only then disable the mod, in case you forgot an area, you can reenable the mod to run /clearlights again
+3. use /uncozymode command that runs /clearlights in areas you visit
 
-- light_brush is not yet craftable, available only in creative. Only default mode for light_brush is tested, others probably now work incorrectly
+- light_brush is available only in creative. Only default mode for light_brush is being tested, other modes probably work incorrectly after recent changes
 - always_fix_edges is on by default now, which is maybe too expensive for potato. Check cozylights mod settings, the ones that are in Luanti settings
-- Can still crash with out of memory error if you place too many huge nodes in quick succession, or rebuild them, or mapgen generates too many massive projectors or simply too many light_sources, or if generally your game is incredibly heavy. In that case decrease global radius in /cozysettings and use the brush to manually place something big or make your mapgen less flashy
-- This is not recommended for multiplayer just yet
-- In case you have adjusted global_radius in /cozysettings or /zs and its now lower than the previous, light clearance for older lights wont work correctly, you will have to /clearlights manually
+- Can still crash with out of memory error if you place too many massive lights(>80 nodes radius) in quick succession, or rebuild them, or mapgen generates too many massive projectors or simply too many light_sources, or if generally your game is incredibly heavy. In that case decrease global radius in /cozysettings and use the brush to manually place something big or make your mapgen less flashy
+- The only safe way to use cozylights in multiplayer is with https://content.luanti.org/packages/SingleDigitIQ/cozylights_schem_loader/ thats the only safe way now. The mod you are running right now is in early alpha and is not recommended for multiplayer just yet
 - There can be small issues with invisible worldedit:placeholder nodes, but with Terraform mod it just works
-- Your feedback matters, so dont hesitate to reach out.
-
+- Your feedback matters, so dont hesitate to reach out
 
 <style color=#55FF55 size=18>Commands</style>
 <style color=#FF5555>Note:</style> Currently max radius is 120 for the commands below. If your value is invalid it will adjust to the closest valid number or report an error. Eventually, the max radius will be much higher.

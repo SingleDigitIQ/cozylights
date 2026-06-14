@@ -111,7 +111,9 @@ function cozylights:get_sphere_surface(radius, sliced)
 					local pow2 = x * x + y * y + z * z
 					if pow2 >= rad_pow2_min and pow2 <= rad_pow2_max then
 						-- todo: could arrange these in a more preferable for optimization order
-						sphere_surface[#sphere_surface + 1] = { x = x, y = y, z = z }
+						local len = math.sqrt(x * x + y * y + z * z)
+						sphere_surface[#sphere_surface + 1] =
+							{ x = x, y = y, z = z, nx = x / len, ny = y / len, nz = z / len }
 					end
 				end
 			end
@@ -239,7 +241,8 @@ function cozylights:lightcast(pos, dir, radius, data, param2data, a, dim_levels)
 		local x, y, z = mf(dx * i + dirfloor) + px, mf(dy * i + dirfloor) + py, mf(dz * i + dirfloor) + pz
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
-		if cozycids_sunlight_propagates[cid] == true then
+		local is_origin = (x == px and y == py and z == pz)
+		if cozycids_sunlight_propagates[cid] == true and not is_origin then
 			if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
 				local dim = (dim_levels[i] - light_nerf) >= 1 and (dim_levels[i] - light_nerf) or 1
 				local light = c_lights[dim]
@@ -403,7 +406,9 @@ function cozylights:lightcast_fix_edges(pos, dir, radius, data, param2data, a, d
 		end
 		local idx = a:index(x, y, z)
 		local cid = data[idx]
-		if not cozycids_sunlight_propagates[cid] then
+
+		local is_origin = (x == px and y == py and z == pz)
+		if not cozycids_sunlight_propagates[cid] and not is_origin then
 			break
 		end
 		if cid == c_air or (cid >= c_light1 and cid <= c_light_debug14) then
@@ -424,6 +429,8 @@ function cozylights:lightcast_fix_edges(pos, dir, radius, data, param2data, a, d
 					param2data[idx] = dim
 				end
 			end
+		elseif is_origin then
+		-- do literally nothing, this branch in hot loop is so lame
 		else
 			light_nerf = light_nerf + 1
 		end
@@ -715,4 +722,224 @@ function cozylights:lightcast_blend_fix_edges(pos, dir, radius, data, param2data
 		next_x, next_y, next_z =
 			mf(dx * (i + 1) + dirfloor) + px, mf(dy * (i + 1) + dirfloor) + py, mf(dz * (i + 1) + dirfloor) + pz
 	end
+end
+function cozylights:shadowcast_fix_edges(pos, dir, radius, data, param2data, a, pos_placed)
+	local px, py, pz = pos.x, pos.y, pos.z
+	local dx, dy, dz = dir.x, dir.y, dir.z
+	local stepX = dx > 0 and 1 or (dx < 0 and -1 or 0)
+	local stepY = dy > 0 and 1 or (dy < 0 and -1 or 0)
+	local stepZ = dz > 0 and 1 or (dz < 0 and -1 or 0)
+	local tDeltaX = stepX ~= 0 and math.abs(1 / dx) or math.huge
+	local tDeltaY = stepY ~= 0 and math.abs(1 / dy) or math.huge
+	local tDeltaZ = stepZ ~= 0 and math.abs(1 / dz) or math.huge
+	local tMaxX = stepX ~= 0 and 0.5 * tDeltaX or math.huge
+	local tMaxY = stepY ~= 0 and 0.5 * tDeltaY or math.huge
+	local tMaxZ = stepZ ~= 0 and 0.5 * tDeltaZ or math.huge
+	local x, y, z = px, py, pz
+	local passed_obstruction = false
+	for step = 1, radius * 3 do
+		local dist = (x - px) * dx + (y - py) * dy + (z - pz) * dz
+		local i = math.floor(dist + 0.5)
+		if i < 1 then
+			i = 1
+		end
+		if i > radius then
+			break
+		end
+		if x == pos_placed.x and y == pos_placed.y and z == pos_placed.z then
+			passed_obstruction = true
+		else
+			local idx = a:index(x, y, z)
+			local cid = data[idx]
+
+			local is_origin = (x == px and y == py and z == pz)
+			if not cozycids_sunlight_propagates[cid] and not is_origin then
+				break
+			end
+			if passed_obstruction and cid >= c_light1 and cid <= c_light_debug14 then
+				data[idx] = c_air
+				param2data[idx] = 0
+			end
+		end
+		if tMaxX < tMaxY then
+			if tMaxX < tMaxZ then
+				x = x + stepX
+				tMaxX = tMaxX + tDeltaX
+			else
+				z = z + stepZ
+				tMaxZ = tMaxZ + tDeltaZ
+			end
+		else
+			if tMaxY < tMaxZ then
+				y = y + stepY
+				tMaxY = tMaxY + tDeltaY
+			else
+				z = z + stepZ
+				tMaxZ = tMaxZ + tDeltaZ
+			end
+		end
+	end
+end
+
+function cozylights:shadowcast(pos, dir, radius, data, param2data, a, pos_placed)
+	local px, py, pz = pos.x, pos.y, pos.z
+	local dx, dy, dz = dir.x, dir.y, dir.z
+	local passed_obstruction = false
+	for i = 1, radius do
+		local x = math.floor(dx * i + dirfloor) + px
+		local y = math.floor(dy * i + dirfloor) + py
+		local z = math.floor(dz * i + dirfloor) + pz
+		if x == pos_placed.x and y == pos_placed.y and z == pos_placed.z then
+			passed_obstruction = true
+		else
+			local idx = a:index(x, y, z)
+			local cid = data[idx]
+			local is_origin = (x == px and y == py and z == pz)
+			if not cozycids_sunlight_propagates[cid] and not is_origin then
+				break
+			end
+			if passed_obstruction and cid >= c_light1 and cid <= c_light_debug14 then
+				data[idx] = c_air
+				param2data[idx] = 0
+			end
+		end
+	end
+end
+
+function cozylights:update_shadow_cone(pos_placed)
+	local t = os.clock()
+	local max_bound = 15
+	for bound, _ in pairs(cozylights.rebuild_bounds) do
+		if bound > max_bound then
+			max_bound = bound
+		end
+	end
+
+	local s_minp = vector.subtract(pos_placed, max_bound)
+	local s_maxp = vector.add(pos_placed, max_bound)
+	local nearby_lights = cozylights.storage.get_lights_in_area(s_minp, s_maxp)
+
+	local occluded_lights = {}
+	for i = 1, #nearby_lights do
+		local l_data = nearby_lights[i]
+		if l_data.generated then
+			local V_a = vector.subtract(pos_placed, l_data.pos)
+			local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
+			if D_sq <= l_data.radius * l_data.radius and D_sq > 0 then
+				occluded_lights[#occluded_lights + 1] = {
+					pos = l_data.pos,
+					radius = l_data.radius,
+				}
+			end
+		end
+	end
+
+	if #occluded_lights == 0 then
+		return
+	end
+
+	-- Pass 1: Geometry & Bounding
+	local min_read = { x = pos_placed.x, y = pos_placed.y, z = pos_placed.z }
+	local max_read = { x = pos_placed.x, y = pos_placed.y, z = pos_placed.z }
+	local active_casts = {}
+	local VOXEL_SQ_RADIUS = (math.sqrt(3) / 2) ^ 2 * 1.5
+
+	for i = 1, #occluded_lights do
+		local source_pos = occluded_lights[i].pos
+		local radius = occluded_lights[i].radius
+
+		-- Fast API lookup to break VM dependency
+		local node_below = minetest.get_node({ x = source_pos.x, y = source_pos.y - 1, z = source_pos.z }).name
+		local node_above = minetest.get_node({ x = source_pos.x, y = source_pos.y + 1, z = source_pos.z }).name
+		local ylvl = 1
+		if node_below == "air" and node_above ~= "air" then
+			ylvl = -1
+		end
+		local adj_source = { x = source_pos.x, y = source_pos.y + ylvl, z = source_pos.z }
+
+		local V_a = vector.subtract(pos_placed, adj_source)
+		local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
+		local D = math.sqrt(D_sq)
+		local ux, uy, uz = V_a.x / D, V_a.y / D, V_a.z / D
+
+		-- Dynamic threshold: retain precise overlap heuristic
+		local cos_theta
+		if #occluded_lights == 1 then
+			cos_theta = 1.0 - (VOXEL_SQ_RADIUS / (2 * D_sq))
+		else
+			cos_theta = (D_sq > 3.0) and (math.sqrt(D_sq - 3.0) / D) or -1.0
+		end
+
+		local sphere_surface = cozylights:get_sphere_surface(radius)
+		local valid_targets = {}
+
+		-- Expand VM bounds precisely along the valid cone vectors
+		for j = 1, #sphere_surface do
+			local target = sphere_surface[j]
+			local dot = ux * target.nx + uy * target.ny + uz * target.nz
+
+			if dot >= cos_theta then
+				valid_targets[#valid_targets + 1] = target
+
+				local ex = adj_source.x + target.x
+				local ey = adj_source.y + target.y
+				local ez = adj_source.z + target.z
+
+				min_read.x = math.min(min_read.x, adj_source.x, ex)
+				max_read.x = math.max(max_read.x, adj_source.x, ex)
+				min_read.y = math.min(min_read.y, adj_source.y, ey)
+				max_read.y = math.max(max_read.y, adj_source.y, ey)
+				min_read.z = math.min(min_read.z, adj_source.z, ez)
+				max_read.z = math.max(max_read.z, adj_source.z, ez)
+			end
+		end
+
+		active_casts[#active_casts + 1] = {
+			adj_source = adj_source,
+			radius = radius,
+			targets = valid_targets,
+		}
+	end
+
+	if #active_casts == 0 then
+		return
+	end
+
+	-- Pad bounds strictly for DDA adjacency logic
+	min_read.x, min_read.y, min_read.z = min_read.x - 1, min_read.y - 1, min_read.z - 1
+	max_read.x, max_read.y, max_read.z = max_read.x + 1, max_read.y + 1, max_read.z + 1
+
+	-- Pass 2: Highly Constrained VoxelManip I/O
+	local vm = cozylights.get_voxel_manip()
+	local emin, emax = vm:read_from_map(min_read, max_read)
+	local data = vm:get_data()
+	local param2data = vm:get_param2_data()
+	local a = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
+
+	local use_fix_edges = cozylights.always_fix_edges
+	local visited_pos = use_fix_edges and {} or nil
+
+	for i = 1, #active_casts do
+		local cast = active_casts[i]
+		local targets = cast.targets
+
+		for j = 1, #targets do
+			local target = targets[j]
+			local end_pos = {
+				x = cast.adj_source.x + target.x,
+				y = cast.adj_source.y + target.y,
+				z = cast.adj_source.z + target.z,
+			}
+			local dir = vector.direction(cast.adj_source, end_pos)
+
+			if use_fix_edges then
+				cozylights:shadowcast_fix_edges(cast.adj_source, dir, cast.radius, data, param2data, a, pos_placed)
+			else
+				cozylights:shadowcast(cast.adj_source, dir, cast.radius, data, param2data, a, pos_placed)
+			end
+		end
+	end
+
+	cozylights:setVoxelManipData(vm, data, param2data, true)
+	print("Shadow cone update time: " .. math.floor((os.clock() - t) * 1000) .. " ms")
 end
