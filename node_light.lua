@@ -47,22 +47,7 @@ function cozylights:draw_node_light(pos, cozy_item, cozy_name, vm, a, data, para
 		update_needed = 1
 	end
 	local sphere_surface = cozylights:get_sphere_surface(radius)
-	local ylvl = 1
-	local cid = data[a:index(pos.x, pos.y - 1, pos.z)]
-	local cida = data[a:index(pos.x, pos.y + 1, pos.z)]
-	if cid and cida then
-		if
-			(cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
-			and cida ~= c_air
-			and (cida < c_lights[1] or cida > c_light_debug14)
-		then
-			ylvl = -1
-		end
-	else
-		return
-	end
-
-	local draw_pos = { x = pos.x, y = pos.y + ylvl, z = pos.z }
+	local draw_pos = pos
 	fix_edges = fix_edges == nil and cozylights.always_fix_edges or fix_edges
 	if fix_edges == true then
 		local visited_pos = {}
@@ -115,26 +100,11 @@ function cozylights:destroy_light(pos, cozy_item, cozy_name, tx_locks)
 	cozylights.recently_updated[original_hash] = nil
 	local radius = cozylights:calc_dims(cozy_name, cozy_item)
 	local _, _, vm, data, param2data, a = cozylights:getVoxelManipData(pos, radius)
-	local ylvl = 1
-	local cid = data[a:index(pos.x, pos.y - 1, pos.z)]
-	local cida = data[a:index(pos.x, pos.y + 1, pos.z)]
-	if cid and cida then
-		if
-			(cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
-			and cida ~= c_air
-			and (cida < c_lights[1] or cida > c_light_debug14)
-		then
-			ylvl = -1
-		end
-	else
-		return
-	end
-	local center_y = pos.y + ylvl
+	local center_y = pos.y
 	local base_idx = a:index(pos.x, center_y, pos.z)
 	local ystride, zstride = a.ystride, a.zstride
 	local sweep_rad = radius + 1
 	local rad_sq = sweep_rad * sweep_rad
-	local c_light1 = c_lights[1]
 	for z = -sweep_rad, sweep_rad do
 		local z_sq = z * z
 		local idx_z = base_idx + z * zstride
@@ -227,71 +197,129 @@ function cozylights:destroy_light(pos, cozy_item, cozy_name, tx_locks)
 	print("Av light removal time " .. mf(remt_total / remt_count) .. " ms. Sample of: " .. remt_count)
 end
 
-local VOXEL_SQ_RADIUS = (math.sqrt(3) / 2) ^ 2 * 1.5
-
 function cozylights:update_cone(pos_broken)
 	local t = os.clock()
+	local max_bound = 15
+	for bound, _ in pairs(cozylights.rebuild_bounds) do
+		if bound > max_bound then
+			max_bound = bound
+		end
+	end
+	local s_minp = vector.subtract(pos_broken, max_bound)
+	local s_maxp = vector.add(pos_broken, max_bound)
+	local nearby_lights = cozylights.storage.get_lights_in_area(s_minp, s_maxp)
 	local posrebuilds = {}
-	for bound, nodenames in pairs(cozylights.rebuild_bounds) do
-		local s_minp = vector.subtract(pos_broken, bound)
-		local s_maxp = vector.add(pos_broken, bound)
-		local found = cozylights.find_nodes_in_area(s_minp, s_maxp, nodenames)
-		for i = 1, #found do
-			posrebuilds[#posrebuilds + 1] = found[i]
+	for i = 1, #nearby_lights do
+		local l_data = nearby_lights[i]
+		if l_data.generated then
+			local V_a = vector.subtract(pos_broken, l_data.pos)
+			local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
+			if D_sq <= l_data.radius * l_data.radius and D_sq > 0 then
+				posrebuilds[#posrebuilds + 1] = {
+					pos = l_data.pos,
+					radius = l_data.radius,
+				}
+			end
 		end
 	end
 	if #posrebuilds == 0 then
 		return
 	end
-	local vm = cozylights.get_voxel_manip()
-	local emin, emax = vm:read_from_map(
-		vector.subtract(pos_broken, 30), -- Assumes max practical light reach
-		vector.add(pos_broken, 30)
-	)
-	local data = vm:get_data()
-	local param2data = vm:get_param2_data()
-	local a = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
+	local min_read = { x = pos_broken.x, y = pos_broken.y, z = pos_broken.z }
+	local max_read = { x = pos_broken.x, y = pos_broken.y, z = pos_broken.z }
+	local active_casts = {}
+	local VOXEL_SQ_RADIUS = (math.sqrt(3) / 2) ^ 2 * 1.5
 	for i = 1, #posrebuilds do
-		local source_pos = posrebuilds[i]
-		local node = cozylights.get_node(source_pos)
-		local cozy_item = cozylights.cozy_items[node.name]
-		local radius, dim_levels = cozylights:calc_dims(node.name, cozy_item)
-		local V_a = vector.subtract(pos_broken, source_pos)
-		local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
-		if D_sq <= radius * radius and D_sq > 0 then
-			local D = math.sqrt(D_sq)
-			local ux, uy, uz = V_a.x / D, V_a.y / D, V_a.z / D
-			local cos_theta = 1.0 - (VOXEL_SQ_RADIUS / (2 * D_sq))
-			local threshold = radius * cos_theta
-			local sphere_surface = cozylights:get_sphere_surface(radius)
+		local source_pos = posrebuilds[i].pos
+		local radius = posrebuilds[i].radius
+		local actual_node = cozylights.get_node(source_pos)
+		local cozy_item = cozylights.cozy_items[actual_node.name]
+		if cozy_item then
+			local _, base_dim_levels = cozylights:calc_dims(actual_node.name, cozy_item)
+			local dim_levels = base_dim_levels
+			if radius > #base_dim_levels then
+				dim_levels = {}
+				for k = 1, radius do
+					dim_levels[k] = base_dim_levels[k] or 1
+				end
+			end
+			local node_below = minetest.get_node({ x = source_pos.x, y = source_pos.y - 1, z = source_pos.z }).name
+			local node_above = minetest.get_node({ x = source_pos.x, y = source_pos.y + 1, z = source_pos.z }).name
 			local ylvl = 1
-			local cid = data[a:index(source_pos.x, source_pos.y - 1, source_pos.z)]
-			local cida = data[a:index(source_pos.x, source_pos.y + 1, source_pos.z)]
-			if
-				cid
-				and cida
-				and (cid == c_air or (cid >= c_lights[1] and cid <= c_light_debug14))
-				and cida ~= c_air
-				and (cida < c_lights[1] or cida > c_light_debug14)
-			then
+			if node_below == "air" and node_above ~= "air" then
 				ylvl = -1
 			end
 			local adj_source = { x = source_pos.x, y = source_pos.y + ylvl, z = source_pos.z }
+			local V_a = vector.subtract(pos_broken, adj_source)
+			local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
+			local D = math.sqrt(D_sq)
+			local ux, uy, uz = V_a.x / D, V_a.y / D, V_a.z / D
+			local cos_theta = 1.0 - (VOXEL_SQ_RADIUS / (2 * D_sq))
+			local sphere_surface = cozylights:get_sphere_surface(radius)
+			local valid_targets = {}
 			for j = 1, #sphere_surface do
 				local target = sphere_surface[j]
-				local dot_unscaled = ux * target.x + uy * target.y + uz * target.z
-				if dot_unscaled >= threshold then
-					local end_pos = {
-						x = adj_source.x + target.x,
-						y = adj_source.y + target.y,
-						z = adj_source.z + target.z,
-					}
-					local dir = vector.direction(adj_source, end_pos)
-					cozylights:lightcast(adj_source, dir, radius, data, param2data, a, dim_levels)
+				local dot = ux * target.nx + uy * target.ny + uz * target.nz
+				if dot >= cos_theta then
+					valid_targets[#valid_targets + 1] = target
+					local ex = adj_source.x + target.x
+					local ey = adj_source.y + target.y
+					local ez = adj_source.z + target.z
+					min_read.x = math.min(min_read.x, adj_source.x, ex)
+					max_read.x = math.max(max_read.x, adj_source.x, ex)
+					min_read.y = math.min(min_read.y, adj_source.y, ey)
+					max_read.y = math.max(max_read.y, adj_source.y, ey)
+					min_read.z = math.min(min_read.z, adj_source.z, ez)
+					max_read.z = math.max(max_read.z, adj_source.z, ez)
 				end
+			end
+			active_casts[#active_casts + 1] = {
+				adj_source = adj_source,
+				radius = radius,
+				dim_levels = dim_levels,
+				targets = valid_targets,
+			}
+		end
+	end
+	if #active_casts == 0 then
+		return
+	end
+	min_read.x, min_read.y, min_read.z = min_read.x - 1, min_read.y - 1, min_read.z - 1
+	max_read.x, max_read.y, max_read.z = max_read.x + 1, max_read.y + 1, max_read.z + 1
+	local vm = cozylights.get_voxel_manip()
+	local emin, emax = vm:read_from_map(min_read, max_read)
+	local data = vm:get_data()
+	local param2data = vm:get_param2_data()
+	local a = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
+	local use_fix_edges = cozylights.always_fix_edges
+	local visited_pos = use_fix_edges and {} or nil
+	for i = 1, #active_casts do
+		local cast = active_casts[i]
+		local targets = cast.targets
+		for j = 1, #targets do
+			local target = targets[j]
+			local end_pos = {
+				x = cast.adj_source.x + target.x,
+				y = cast.adj_source.y + target.y,
+				z = cast.adj_source.z + target.z,
+			}
+			local dir = vector.direction(cast.adj_source, end_pos)
+			if use_fix_edges then
+				cozylights:lightcast_fix_edges(
+					cast.adj_source,
+					dir,
+					cast.radius,
+					data,
+					param2data,
+					a,
+					cast.dim_levels,
+					visited_pos
+				)
+			else
+				cozylights:lightcast(cast.adj_source, dir, cast.radius, data, param2data, a, cast.dim_levels)
 			end
 		end
 	end
 	cozylights:setVoxelManipData(vm, data, param2data, true)
-	print("Aperture update time: " .. math.floor((os.clock() - t) * 1000) .. " ms")
+	print("Cone update time: " .. math.floor((os.clock() - t) * 1000) .. " ms")
 end

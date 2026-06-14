@@ -1,15 +1,15 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.3.1",
+	version = "0.3.2",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	global_brightness = tonumber(minetest.settings:get("cozylights_global_brightness")) or 12,
 	global_radius = tonumber(minetest.settings:get("cozylights_global_radius")) or 15,
 	global_strength = tonumber(minetest.settings:get("cozylights_global_strength")) or 0.5,
 	brightness_factor = tonumber(minetest.settings:get("cozylights_brightness_factor")) or 8,
-	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.03,
+	wield_step = tonumber(minetest.settings:get("cozylights_wield_step")) or 0.1,
 	brush_hold_step = tonumber(minetest.settings:get("cozylights_brush_hold_step")) or 0.07,
 	on_gen_step = tonumber(minetest.settings:get("cozylights_on_gen_step")) or 0.7,
-	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 15,
+	max_wield_light_radius = tonumber(minetest.settings:get("cozylights_wielded_light_radius")) or 10,
 	override_engine_lights = minetest.settings:get_bool("cozylights_override_engine_lights", false),
 	always_fix_edges = minetest.settings:get_bool("cozylights_always_fix_edges", false),
 	uncozy_mode = tonumber(minetest.settings:get("cozylights_uncozy_mode")) or 0,
@@ -17,13 +17,14 @@ cozylights = {
 	-- appears nodes and items might not necessarily be the same array
 	source_nodes = nil,
 	cozy_items = nil,
-	-- dynamic size tables, okay now what about functions
 	cozycids_sunlight_propagates = {},
 	cozycids_light_sources = {},
 	cozyplayers = {},
 	area_queue = {},
 	single_light_queue = {},
 	modpath = minetest.get_modpath(minetest.get_current_modname()),
+	is_mcl = false,
+	mcl_player_context = false, -- a hack around voxelibre hack that hacks around engine api
 }
 
 local modpath = minetest.get_modpath(minetest.get_current_modname())
@@ -31,6 +32,10 @@ dofile(modpath .. "/helpers.lua")
 
 if cozylights:mod_loaded("br_core") then
 	cozylights.brightness_factor = cozylights.brightness_factor - 6
+end
+
+if cozylights:mod_loaded("mcl_core") then
+	cozylights.is_mcl = true
 end
 
 dofile(modpath .. "/nodes.lua")
@@ -41,6 +46,7 @@ dofile(modpath .. "/node_light.lua")
 dofile(modpath .. "/light_brush.lua")
 dofile(modpath .. "/api_overrides.lua")
 dofile(modpath .. "/manual.lua")
+dofile(modpath .. "/storage.lua")
 
 local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
@@ -65,14 +71,12 @@ local c_light_debug14 = c_lights[14] + 14
 local mf = math.floor
 
 ------------------------------------------
-
 minetest.register_on_mods_loaded(function()
 	local source_nodes = {}
 	local cozy_items = {}
 	local cozycids_sunlight_propagates = {}
 	local cozycids_light_sources = {}
 	local override = cozylights.override_engine_lights
-
 	local function is_transient_light(def)
 		if string.find(def.name, "everness:") ~= nil and def.groups and def.groups.vine ~= nil then
 			return true
@@ -89,8 +93,18 @@ minetest.register_on_mods_loaded(function()
 		end
 		return false
 	end
-
 	for _, def in pairs(minetest.registered_items) do
+		if cozylights.is_mcl then
+			local orig_on_place = def.on_place or minetest.item_place
+			minetest.override_item(def.name, {
+				on_place = function(itemstack, placer, pointed_thing)
+					cozylights.mcl_player_context = true
+					local result = { orig_on_place(itemstack, placer, pointed_thing) }
+					cozylights.mcl_player_context = false
+					return unpack(result)
+				end,
+			})
+		end
 		if
 			def.light_source
 			and def.light_source > 1
@@ -136,6 +150,7 @@ minetest.register_on_mods_loaded(function()
 							if base_on_destruct then
 								base_on_destruct(pos)
 							end
+							cozylights.storage.remove_light(pos)
 							local cozy_item = cozy_items[def.name]
 							print(cozylights:dump(pos))
 							print(def.name .. " is destroyed")
@@ -158,7 +173,28 @@ minetest.register_on_mods_loaded(function()
 							end
 							local cozy_item = cozy_items[def.name]
 							if cozy_item then
+								local radius, _ = cozylights:calc_dims(def.name, cozy_item)
+								cozylights.storage.set_light(pos, radius, true)
 								cozylights:draw_node_light(pos, cozy_item, def.name)
+							end
+						end,
+					})
+				end
+			end
+		end
+		-- this is a bit excessive
+		if cozylights.is_mcl then
+			if def.sunlight_propagates ~= true and def.drawtype ~= "liquid" and def.drawtype ~= "airlike" then
+				local cid = minetest.get_content_id(def.name)
+				if (cid < c_lights[1] or cid > c_lights[14] + 14) and not is_transient_light(def) then
+					local base_on_construct = def.on_construct
+					minetest.override_item(node, {
+						on_construct = function(pos)
+							if base_on_construct then
+								base_on_construct(pos)
+							end
+							if cozylights.mcl_player_context then
+								cozylights:update_shadow_cone(pos)
 							end
 						end,
 					})
@@ -170,7 +206,6 @@ minetest.register_on_mods_loaded(function()
 	cozylights.cozy_items = cozy_items
 	cozylights.cozycids_sunlight_propagates = cozycids_sunlight_propagates
 	cozylights.cozycids_light_sources = cozycids_light_sources
-
 	--hoes in particular
 	for name, def in pairs(minetest.registered_items) do
 		local is_hoe = false
@@ -619,11 +654,9 @@ minetest.register_globalstep(function(dtime)
 				pos.y = pos.y + 1
 				local last_pos = cozyplayer.last_uncozy_pos or vector.new(0, -9999, 0)
 				local dist = vector.distance(pos, last_pos)
-				-- Only queue new overlapping spheres if the player moved out of the center
 				if dist > UNCOZY_CHUNK_RAD then
 					cozyplayer.last_uncozy_pos = pos
 					local rad = cozylights.uncozy_mode
-					-- Generate a grid of center-points to cover the total radius
 					for x = -rad, rad, UNCOZY_STEP do
 						for y = -rad, rad, UNCOZY_STEP do
 							for z = -rad, rad, UNCOZY_STEP do
@@ -637,13 +670,11 @@ minetest.register_globalstep(function(dtime)
 					end
 				end
 			end
-			-- Consume one sub-sphere per engine tick
 			local q = cozylights.uncozy_chunk_queue
 			local idx = cozylights.uncozy_queue_idx
 			if idx <= #q then
 				local target_pos = q[idx]
 				cozylights.uncozy_queue_idx = idx + 1
-				-- Call your existing function silently
 				local exe_time = cozylights:clear(target_pos, UNCOZY_CHUNK_RAD)
 				if cozylights.crispy_potato and exe_time > on_gen_step then
 					on_gen_step = exe_time * 2
@@ -660,71 +691,55 @@ end)
 local gent_total = 0
 local gent_count = 0
 minetest.register_on_generated(function(minp, maxp)
-	local pos = vector.add(minp, vector.floor(vector.divide(vector.subtract(maxp, minp), 2)))
 	local light_sources = cozylights.find_nodes_in_area(minp, maxp, cozylights.source_nodes)
 	if #light_sources == 0 then
 		return
 	end
 	if #light_sources > 1000 then
-		print("Error: too many light sources around " .. cozylights:dump(pos) .. " Report this to Cozy Lights dev")
-		return
+		minetest.log(
+			"warning",
+			"[cozylights] Mapchunk at " .. cozylights:dump(minp) .. " saturated with >1000 lights. Gobbling up anyway."
+		)
 	end
-	--local minp_exp,maxp_exp,_,data,_,a = cozylights:getVoxelManipData(pos, size)
-	--local t = os.clock()
-	local sources = {}
-	local a = VoxelArea:new({
-		MinEdge = minp,
-		MaxEdge = maxp,
-	})
-	local minp_exp, maxp_exp = minp, maxp
-	for _, p in pairs(light_sources) do
-		local name = cozylights.get_node(p).name --get_name_from_content_id(cid)
+	for _, p in ipairs(light_sources) do
+		local name = cozylights.get_node(p).name
 		local cozy_item = cozylights.cozy_items[name]
 		local radius, _ = cozylights:calc_dims(name, cozy_item)
-		local min_rad = vector.subtract(p, radius)
-		local max_rad = vector.add(p, radius)
-		if a:containsp(min_rad) and a:containsp(max_rad) then
-			sources[#sources + 1] = {
-				pos = p,
-				cozy_item = cozy_item,
-			}
-		else
-			minp_exp = {
-				x = minp_exp.x > min_rad.x and min_rad.x or minp_exp.x,
-				y = minp_exp.y > min_rad.y and min_rad.y or minp_exp.y,
-				z = minp_exp.z > min_rad.z and min_rad.z or minp_exp.z,
-			}
-			maxp_exp = {
-				x = maxp_exp.x < max_rad.x and max_rad.x or maxp_exp.x,
-				y = maxp_exp.y < max_rad.y and max_rad.y or maxp_exp.y,
-				z = maxp_exp.z < max_rad.z and max_rad.z or maxp_exp.z,
-			}
-
-			a = VoxelArea:new({
-				MinEdge = minp_exp,
-				MaxEdge = maxp_exp,
-			})
-			sources[#sources + 1] = {
-				pos = p,
-				cozy_item = cozy_item,
-			}
-			--print("adding "..name.." to single_light_queue")
-			--table.insert(cozylights.single_light_queue, {
-			--	pos=p,
-			--	cozy_item=cozy_item
-			--})
-		end
-	end
-	--gent_total = gent_total + mf((os.clock() - t) * 1000)
-	--gent_count = gent_count + 1
-	--print("Av mapchunk generation time " .. mf(gent_total/gent_count) .. " ms. Sample of: "..gent_count)
-	if #sources > 0 then
-		print(
-			"on_generated adding area:" .. cozylights:dump({ minp = minp_exp, maxp = maxp_exp, volume = a:getVolume() })
-		)
-		cozylights:push_area_queue(minp_exp, maxp_exp, sources)
+		cozylights.storage.set_light(p, radius, false)
 	end
 end)
+
+-- when we dig the ground near a light_source
+minetest.register_on_dignode(function(pos, oldnode, digger)
+	if oldnode.name == "air" or minetest.registered_nodes[oldnode.name].drawtype == "liquid" then
+		return
+	end
+	if
+		cozylights.cozycids_light_sources[minetest.get_content_id(oldnode.name)]
+		or oldnode.name:sub(1, 22) == "cozylights:light_debug"
+	then
+		return
+	end
+	cozylights:update_cone(pos)
+end)
+
+-- to update light maps when an obstruction is placed
+if not cozylights.is_mcl then
+	minetest.register_on_placenode(function(pos, newnode, placer, oldnode, itemstack, pointed_thing)
+		local nodedef = minetest.registered_nodes[newnode.name]
+		if newnode.name == "air" or (nodedef and nodedef.drawtype == "liquid") then
+			return
+		end
+		if
+			cozylights.cozycids_light_sources[minetest.get_content_id(newnode.name)]
+			or newnode.name:sub(1, 22) == "cozylights:light_debug"
+		then
+			return
+		end
+
+		cozylights:update_shadow_cone(pos)
+	end)
+end
 
 --does everything except for generation that requires to check for air first
 --still investigating the viability of all options considering other mods behavior
@@ -755,59 +770,3 @@ end)
 		end
 	end
 end)]]
-
--- when we dig the ground near a light_source
-minetest.register_on_dignode(function(pos, oldnode, digger)
-	if oldnode.name == "air" or minetest.registered_nodes[oldnode.name].drawtype == "liquid" then
-		return
-	end
-	if cozylights.cozycids_light_sources[minetest.get_content_id(oldnode.name)] then
-		return
-	end
-	cozylights:update_cone(pos)
-end)
-
--- to update light maps when an obstruction is placed
-minetest.register_on_placenode(function(pos, newnode, placer, oldnode, itemstack, pointed_thing)
-	local nodedef = minetest.registered_nodes[newnode.name]
-	if newnode.name == "air" or (nodedef and nodedef.drawtype == "liquid") then
-		return
-	end
-	if cozylights.cozycids_light_sources[minetest.get_content_id(newnode.name)] then
-		return
-	end
-	local sources_to_rebuild = {}
-	for bound, nodenames in pairs(cozylights.rebuild_bounds) do
-		local s_minp = vector.subtract(pos, bound)
-		local s_maxp = vector.add(pos, bound)
-		local found = cozylights.find_nodes_in_area(s_minp, s_maxp, nodenames)
-		for i = 1, #found do
-			local source_pos = found[i]
-			local node = cozylights.get_node(source_pos)
-			local cozy_item = cozylights.cozy_items[node.name]
-			if cozy_item then
-				local radius, _ = cozylights:calc_dims(node.name, cozy_item)
-				local V = vector.subtract(pos, source_pos)
-				local D_sq = V.x * V.x + V.y * V.y + V.z * V.z
-				if D_sq <= radius * radius and D_sq > 0 then
-					sources_to_rebuild[#sources_to_rebuild + 1] = {
-						pos = source_pos,
-						cozy_item = cozy_item,
-					}
-				end
-			end
-		end
-	end
-	if #sources_to_rebuild > 0 then
-		local tx_locks = {}
-		for i = 1, #sources_to_rebuild do
-			local hash = hash_pos(sources_to_rebuild[i].pos)
-			tx_locks[hash] = true
-		end
-		for i = 1, #sources_to_rebuild do
-			local src = sources_to_rebuild[i]
-			cozylights:destroy_light(src.pos, src.cozy_item, src.cozy_item.name, tx_locks)
-		end
-		cozylights:rebuild_light()
-	end
-end)

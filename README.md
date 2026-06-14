@@ -34,10 +34,6 @@ Buildable voxel light maps are a complete game changer - it is almost like going
 
 2. You will have to disable K Ambient Light to use Cozy Lights, together, they are not recommended for now.
 
-3. Can crash your server with out of memory error if you are too potato. Typical limit is about 1-2 GB for LuaJIT because of how it uses 32bit virtual registers or something, and in some cases it can be exceeded, especially in multiplayer, or with very particular mods that place too many light sources on the map.
-
-4. See if there is redundant rebuild lights when a new light source is placed
-
 *For what it does it's quite fast, it is supposed to somehow get even faster. I have recently discovered that my CPU is 10(!) years old and it's actually usable on my PC. Would appreciate if somebody with a beast PC would try this mod out and post a couple of benchmarks, and also if some phone poster will try to do the same*
 
 ## Light Brush
@@ -127,22 +123,25 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - with new accurate algo brush in any mode other than default probably functions incorrectly
 
-- Needs to utilize mod storage to save light_source info like radius, so that it will be easier to destroy and rebuild lights, and also search for them, and also,
-will give us an option not to generate all cozylights, for example only generate lights within 100 blocks distance and ignore the rest, which is super important
-since the engine generation does too much all the time. This is also the fix to the problem when in case you have adjusted global_radius in /cozysettings or /zs and its now lower than the previous, light clearance for older lights wont work correctly, you will have to /clearlights manually
-it will also open the path to /undo implementation for light_brush
-basically maintain files in which you record light source positions, which can be quickly grabbed to rebuild lights if there is a removal
-and give light sources metadata, so when nearby light sources are destroyed you can find and rebuild easily, also give metadata to light brush epicenter for the same reason
+- try hax node for node_light
 
-- make darkness nodes, wielded darkness, Darkness Brush or shadow brush. Maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
+- undo for light brush
+
+- dynamic priority queue
 
 - save brush settings in item metadata and change icon somehow to resemble the settings
 
-- all queues should be saved in case of server shutdown, so they can be resumed
+- all queues should be saved in case of server shutdown, especially if its a crash, so these queues can be resumed
+
+- make darkness nodes, wielded darkness, Darkness Brush or shadow brush. Maybe three types of darkness nodes, ones that are completely overridable with cozylights, and ones that arent(make a darker light shade), and ones that completely ignore cozylights
+
+- test mods with badly performing complex mapgens, some of them are popular
+
+- see what can be done about snow and slabs not passing the light through
+
+- soul lantern or something from voxelibre gets mistakenly excluded from light_sources
 
 - add /ignore certain block
-
-- Amanatides and Woo is too much for voxel reality. There needs to be something
 
 - Still need to have /disableongen for multiplayer servers and potatoes. Also put all commands behind a permission gate
 
@@ -152,19 +151,17 @@ and give light sources metadata, so when nearby light sources are destroyed you 
 
 - algo for many adjacent lights
 
-- see what can be done about snow and slabs not passing the light through
+- there are angles in which naive algo behaves perfectly correctly. merge fix_edges and naive algo, evaluate by angle.
 
 - make dropped items emit cozy lights(but less) if they have light_source above 0, just like in original wielded light mod
 
-- make sure bigger lights wont go unnoticed in on_generated and schematic placement. apparnetly on generated can support lights up to 80 if max area radius is 120
+- make sure bigger lights wont go unnoticed in on_generated and schematic placement. apparently on generated can support lights up to 80 if max area radius is 120
 
 - dont make floodable light sources work underwater just like in original wielded light
 
 - fix nodecore dynamic light source not updating the brightness/radius
 
 - add privileges so schematics can be used on multiplayer server
-
-- parse minetest forum for optional_depends
 
 - add inventory images for lights and debug lights, make them only available in creative
 
@@ -174,7 +171,11 @@ and give light sources metadata, so when nearby light sources are destroyed you 
 
 - add Consumer Grade Reality Bending Device to create preset nodes with chosen qualities
 
-- lights auto rebuild on first load after settings change?
+- add Literal Light Printer that prints user uploaded monochrome pixel art on any surface
+
+- flashlight for survival
+
+- see if its worth it to make light brush craftable in survival. if making it available, it should consume massive amounts of resources per charge, because its too op. possibly recyclable resource that can be harvested with light excavation tool or something
 
 - raytracing
 
@@ -193,6 +194,8 @@ and give light sources metadata, so when nearby light sources are destroyed you 
 - make a table for existing decoration nodes
 
 - add static natural scene(stop the time, fix the sun/moon in one position, update the area accordingly)
+
+- wield_light with radius above 0 does not actually trigger nice light engine gradient, probably wont fix though
 
 ### Some empirical observations about LuaJIT
 

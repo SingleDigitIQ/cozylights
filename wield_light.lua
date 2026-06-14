@@ -1,6 +1,6 @@
 local c_air = minetest.get_content_id("air")
 local c_light1 = minetest.get_content_id("cozylights:light1")
---let wield_light ignore c_light_debug nodes or things get complicated
+
 local c_lights = {
 	c_light1,
 	c_light1 + 1,
@@ -21,29 +21,50 @@ local c_lights = {
 local gent_total = 0
 local gent_count = 0
 local mf = math.floor
---local cozycids_sunlight_propagates = cozylights.cozycids_sunlight_propagates
+
+local ray_caches = {}
+local function build_ray_cache(radius, dim_levels)
+	if ray_caches[radius] then
+		return ray_caches[radius]
+	end
+	local surface = cozylights:get_sphere_surface(radius)
+	local cache = {}
+	for i = 1, #surface do
+		local ray = {}
+		local pos2 = surface[i]
+		local len = math.sqrt(pos2.x * pos2.x + pos2.y * pos2.y + pos2.z * pos2.z)
+		local nx, ny, nz = pos2.x / len, pos2.y / len, pos2.z / len
+		local pointer = 1
+		for r = 1, radius do
+			ray[pointer] = mf(nx * r + 0.5)
+			ray[pointer + 1] = mf(ny * r + 0.5)
+			ray[pointer + 2] = mf(nz * r + 0.5)
+			ray[pointer + 3] = dim_levels[r] or 1
+			pointer = pointer + 4
+		end
+		cache[i] = ray
+	end
+	ray_caches[radius] = cache
+	return cache
+end
 
 local function destroy_stale_wielded_light(data, param2data, a, cozyplayer)
-	local c_light1 = c_lights[1]
 	local c_light14 = c_lights[14]
+	if not cozyplayer.prev_wielded_lights then
+		return
+	end
 	for j, p in ipairs(cozyplayer.prev_wielded_lights) do
-		if a and a:containsp(p) then
-			local idx = a:indexp(p)
+		local idx = a:index(p.x, p.y, p.z)
+		if data[idx] == p.placed_cid and param2data[idx] == p.old_p2 then
+			data[idx] = p.old_cid
+		else
 			local cid = data[idx]
 			if cid >= c_light1 and cid <= c_light14 then
-				if param2data[idx] > 0 and param2data[idx] <= 14 then
-					data[idx] = c_light1 + param2data[idx] - 1
+				local anchor = param2data[idx]
+				if anchor > 0 and anchor <= 14 then
+					data[idx] = c_light1 + anchor - 1
 				else
 					data[idx] = c_air
-				end
-			end
-		else
-			local node = cozylights.get_node(p)
-			if string.find(node.name, "cozylights:light") then
-				if node.param2 == 0 then
-					minetest.set_node(p, { name = "air" })
-				else
-					minetest.set_node(p, { name = "cozylights:light" .. node.param2 })
 				end
 			end
 		end
@@ -51,70 +72,40 @@ local function destroy_stale_wielded_light(data, param2data, a, cozyplayer)
 	cozyplayer.prev_wielded_lights = {}
 end
 
---- Like normal raycast but only covers surfaces, faster for large distances, somewhat less accurate
-local function lightcast_lite(pos, dir, dirs, radius, data, param2data, a, dim_levels, cozyplayer)
-	local px, py, pz, dx, dy, dz = pos.x, pos.y, pos.z, dir.x, dir.y, dir.z
-	local c_light14 = c_lights[14]
-	local light_nerf = 0
-	for i = 1, radius do
-		local x = mf(dx * i + 0.5) + px
-		local y = mf(dy * i + 0.5) + py
-		local z = mf(dz * i + 0.5) + pz
-		local idx = a:index(x, y, z)
-		local cid = data[idx]
-		if cid and (cid == c_air or (cid >= c_light1 and cid <= c_light14)) then
-			for n = 1, 6 do
-				local adj_idx = idx + dirs[n]
-				local adj_cid = data[adj_idx]
-				if adj_cid and ((adj_cid < c_light1 and adj_cid ~= c_air) or adj_cid > c_light14) then
-					local dim = (dim_levels[i] - light_nerf) > 0 and (dim_levels[i] - light_nerf) or 1
-					local light = c_lights[dim]
-					if light > cid then
-						data[idx] = light
-						table.insert(cozyplayer.prev_wielded_lights, { x = x, y = y, z = z })
-						if cid == c_air and param2data[idx] > 0 then
-							param2data[idx] = 0
-						end
+function cozylights:wielded_light_cleanup(player, cozyplayer, radius)
+	if cozyplayer.prev_wielded_lights then
+		for j, p in ipairs(cozyplayer.prev_wielded_lights) do
+			local node = cozylights.get_node({ x = p.x, y = p.y, z = p.z })
+			local placed_name = minetest.get_name_from_content_id(p.placed_cid) or "air"
+			if node.name == placed_name and node.param2 == p.old_p2 then
+				local old_name = minetest.get_name_from_content_id(p.old_cid) or "air"
+				minetest.swap_node({ x = p.x, y = p.y, z = p.z }, { name = old_name, param2 = p.old_p2 })
+			else
+				if string.sub(node.name, 1, 16) == "cozylights:light" then
+					local anchor = node.param2
+					if anchor > 0 and anchor <= 14 then
+						minetest.swap_node(
+							{ x = p.x, y = p.y, z = p.z },
+							{ name = "cozylights:light" .. anchor, param2 = anchor }
+						)
+					else
+						minetest.swap_node({ x = p.x, y = p.y, z = p.z }, { name = "air" })
 					end
-					break
 				end
 			end
-		else
-			break
 		end
+		cozyplayer.prev_wielded_lights = {}
 	end
-end
-
-function cozylights:wielded_light_cleanup(player, cozyplayer, radius)
-	local pos = vector.round(player:get_pos())
-	local vm = cozylights.get_voxel_manip()
-	local emin, emax
 	local last_pos = cozyplayer.last_pos
-	local distance = vector.distance(pos, last_pos)
-	if distance < 20 then
-		local pos1 = {
-			x = pos.x < last_pos.x and pos.x or last_pos.x,
-			y = pos.y < last_pos.y and pos.y or last_pos.y,
-			z = pos.z < last_pos.z and pos.z or last_pos.z,
-		}
-		local pos2 = {
-			x = pos.x > last_pos.x and pos.x or last_pos.x,
-			y = pos.y > last_pos.y and pos.y or last_pos.y,
-			z = pos.z > last_pos.z and pos.z or last_pos.z,
-		}
-		emin, emax = vm:read_from_map(vector.subtract(pos1, radius + 1), vector.add(pos2, radius + 1))
-	else
-		emin, emax = vm:read_from_map(vector.subtract(pos, radius + 1), vector.add(pos, radius + 1))
+	local last_rad = cozyplayer.last_wield_radius
+	if last_pos and last_rad and last_rad > 0 then
+		local r = last_rad + 14
+		local fix_min = vector.subtract(last_pos, r)
+		local fix_max = vector.add(last_pos, r)
+		minetest.fix_light(fix_min, fix_max)
 	end
-	local data = vm:get_data()
-	local a = VoxelArea:new({
-		MinEdge = emin,
-		MaxEdge = emax,
-	})
-	local param2data = vm:get_param2_data()
-	destroy_stale_wielded_light(data, param2data, a, cozyplayer)
-
-	cozylights:setVoxelManipData(vm, data, nil, true)
+	cozyplayer.last_wield_radius = nil
+	cozyplayer.last_hard_sync_pos = nil
 end
 
 local max_wield_light_radius = cozylights.max_wield_light_radius
@@ -140,94 +131,104 @@ function cozylights:draw_wielded_light(
 	emax
 )
 	local t = os.clock()
-	local update_needed = 0
 	local radius, dim_levels = cozylights:calc_dims(wield_name, cozy_item)
 	radius = radius > max_wield_light_radius and max_wield_light_radius or radius
-	if radius == 0 then
-		destroy_stale_wielded_light(data, param2data, a, cozyplayer)
-		local node = cozylights.get_node(pos)
-		if node.name == "air" or string.match(node.name, "cozylights:") then
-			local brightness_mod = cozy_item.modifiers ~= nil
-					and cozylights.coziest_table[cozy_item.modifiers].brightness
-				or 0
-			local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod) > 0
-					and mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod)
-				or 0
-			max_light = max_light > 14 and 14 or max_light
-			local cid = minetest.get_content_id("cozylights:light" .. max_light)
-			if cid > minetest.get_content_id(node.name) then
-				minetest.set_node(pos, { name = "cozylights:light" .. max_light, param2 = node.param2 })
-				cozyplayer.prev_wielded_lights[#cozyplayer.prev_wielded_lights + 1] = pos
-			end
-		else
-			pos.y = pos.y - 1
-			local n_name = cozylights.get_node(pos).name
-			if n_name == "air" or string.match(n_name, "cozylights:") then
-				local brightness_mod = cozy_item.modifiers ~= nil
-						and cozylights.coziest_table[cozy_item.modifiers].brightness
-					or 0
-				local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod) > 0
-						and mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod)
-					or 0
-				max_light = max_light > 14 and 14 or max_light
-				local cid = minetest.get_content_id("cozylights:light" .. max_light)
-				if cid > minetest.get_content_id(node.name) then
-					minetest.set_node(pos, { name = "cozylights:light" .. max_light, param2 = node.param2 })
-					cozyplayer.prev_wielded_lights[#cozyplayer.prev_wielded_lights + 1] = pos
-				end
-			end
+	local brightness_mod = cozy_item.modifiers ~= nil and cozylights.coziest_table[cozy_item.modifiers].brightness or 0
+	local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod)
+	max_light = math.max(1, math.min(14, max_light))
+	local nat_light = minetest.get_natural_light(pos)
+	local last_nat = max_light
+	if cozyplayer.last_pos then
+		last_nat = minetest.get_natural_light(cozyplayer.last_pos) or max_light
+	end
+	if nat_light and nat_light >= max_light and last_nat >= max_light then
+		if cozyplayer.prev_wielded_lights and #cozyplayer.prev_wielded_lights > 0 then
+			cozylights:wielded_light_cleanup(nil, cozyplayer, radius)
 		end
 		return
 	end
-	local possible_pos = vector.add(pos, vel)
-	local node = cozylights.get_node(possible_pos)
-	if node.name == "air" or string.match(node.name, "cozylights:light") then
-		pos = possible_pos
+	local ray_cache = build_ray_cache(radius, dim_levels)
+	if radius == 0 then
+		local new_name = "cozylights:light" .. max_light
+		local new_cid = minetest.get_content_id(new_name)
+		if
+			cozyplayer.last_wield_radius == 0
+			and cozyplayer.prev_wielded_lights
+			and #cozyplayer.prev_wielded_lights == 1
+		then
+			local p = cozyplayer.prev_wielded_lights[1]
+			if p.x == pos.x and p.y == pos.y and p.z == pos.z and p.placed_cid == new_cid then
+				return
+			end
+		end
+		cozylights:wielded_light_cleanup(nil, cozyplayer, radius)
+		local node = cozylights.get_node(pos)
+		local cid = minetest.get_content_id(node.name)
+		if cid == c_air or (cid >= c_light1 and cid <= c_lights[14]) then
+			if new_cid ~= cid then
+				cozyplayer.prev_wielded_lights[1] = {
+					x = pos.x,
+					y = pos.y,
+					z = pos.z,
+					old_cid = cid,
+					old_p2 = node.param2,
+					placed_cid = new_cid,
+				}
+				minetest.swap_node(pos, { name = new_name, param2 = node.param2 })
+			end
+		end
+		cozyplayer.last_wield_radius = radius
+		gent_total = gent_total + mf((os.clock() - t) * 1000)
+		gent_count = gent_count + 1
+		print("Av wield illum time " .. mf(gent_total / gent_count) .. " ms. Sample of: " .. gent_count)
+		return
 	end
-
+	local update_needed = 0
 	if vm == nil then
 		vm = cozylights.get_voxel_manip()
-		local distance = vector.distance(pos, last_pos)
-		if distance < 20 then
-			local pos1 = {
-				x = pos.x < last_pos.x and pos.x or last_pos.x,
-				y = pos.y < last_pos.y and pos.y or last_pos.y,
-				z = pos.z < last_pos.z and pos.z or last_pos.z,
-			}
-			local pos2 = {
-				x = pos.x > last_pos.x and pos.x or last_pos.x,
-				y = pos.y > last_pos.y and pos.y or last_pos.y,
-				z = pos.z > last_pos.z and pos.z or last_pos.z,
-			}
-			emin, emax = vm:read_from_map(vector.subtract(pos1, radius + 1), vector.add(pos2, radius + 1))
-		else
-			emin, emax = vm:read_from_map(vector.subtract(pos, radius + 1), vector.add(pos, radius + 1))
+		local read_min = vector.subtract(pos, radius + 1)
+		local read_max = vector.add(pos, radius + 1)
+		if cozyplayer.prev_wielded_lights then
+			for i = 1, #cozyplayer.prev_wielded_lights do
+				local p = cozyplayer.prev_wielded_lights[i]
+				if p.x < read_min.x then
+					read_min.x = p.x
+				elseif p.x > read_max.x then
+					read_max.x = p.x
+				end
+				if p.y < read_min.y then
+					read_min.y = p.y
+				elseif p.y > read_max.y then
+					read_max.y = p.y
+				end
+				if p.z < read_min.z then
+					read_min.z = p.z
+				elseif p.z > read_max.z then
+					read_max.z = p.z
+				end
+			end
 		end
-		data = vm:get_data()
-		param2data = vm:get_param2_data()
-		a = VoxelArea:new({
-			MinEdge = emin,
-			MaxEdge = emax,
-		})
+		emin, emax = vm:read_from_map(read_min, read_max)
+		cozyplayer.data_buffer = cozyplayer.data_buffer or {}
+		cozyplayer.param2_buffer = cozyplayer.param2_buffer or {}
+		data = vm:get_data(cozyplayer.data_buffer)
+		param2data = vm:get_param2_data(cozyplayer.param2_buffer)
+		a = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 		update_needed = 1
 	end
 	destroy_stale_wielded_light(data, param2data, a, cozyplayer)
-
 	local c_light14 = c_lights[14]
-	local sphere_surface = cozylights:get_sphere_surface(radius)
-	local px = pos.x
-	local py = pos.y
-	local pz = pos.z
-	local y_below = py - 1
-	local y_above = py + 1
-	local cidb = data[a:index(px, y_below, pz)]
-	local cida = data[a:index(px, y_above, pz)]
+	local px, py, pz = pos.x, pos.y, pos.z
+	local idx_below = a:index(px, py - 1, pz)
+	local idx_above = a:index(px, py + 1, pz)
+	local cidb = data[idx_below]
+	local cida = data[idx_above]
 	local c_light_debug14 = c_light14 + 14
 	if cidb and cida then
 		if
-			(cidb == c_air or (cidb >= c_light1 and cidb <= c_light_debug14))
+			(cidb == c_air or (cidb >= c_lights[1] and cidb <= c_light_debug14))
 			and cida ~= c_air
-			and (cida < c_light1 or cida > c_light_debug14)
+			and (cida < c_lights[1] or cida > c_light_debug14)
 		then
 			py = py - 1
 		end
@@ -235,23 +236,48 @@ function cozylights:draw_wielded_light(
 		return
 	end
 	local zstride, ystride = a.zstride, a.ystride
-	local dirs = { -1 * ystride, 1 * ystride, -1, 1, -1 * zstride, 1 * zstride }
-
-	for i, pos2 in ipairs(sphere_surface) do
-		lightcast_lite(
-			pos,
-			vector.direction(pos, { x = px + pos2.x, y = py + pos2.y, z = pz + pos2.z }),
-			dirs,
-			radius,
-			data,
-			param2data,
-			a,
-			dim_levels,
-			cozyplayer
-		)
+	local dirs = { -ystride, ystride, -1, 1, -zstride, zstride }
+	local dedup = {}
+	local base_idx = a:index(px, py, pz)
+	for i = 1, #ray_cache do
+		local ray = ray_cache[i]
+		local len = #ray
+		for r = 1, len, 4 do
+			local dx = ray[r]
+			local dy = ray[r + 1]
+			local dz = ray[r + 2]
+			local dim = ray[r + 3]
+			local idx = base_idx + dz * zstride + dy * ystride + dx
+			local cid = data[idx]
+			if not cid or (cid ~= c_air and (cid < c_lights[1] or cid > c_light14)) then
+				break
+			end
+			for n = 1, 6 do
+				local adj_cid = data[idx + dirs[n]]
+				if adj_cid and ((adj_cid < c_lights[1] and adj_cid ~= c_air) or adj_cid > c_light14) then
+					local light = c_lights[dim]
+					if cid == c_air or light > cid then
+						if not dedup[idx] then
+							dedup[idx] = true
+							cozyplayer.prev_wielded_lights[#cozyplayer.prev_wielded_lights + 1] = {
+								x = px + dx,
+								y = py + dy,
+								z = pz + dz,
+								old_cid = data[idx],
+								old_p2 = param2data[idx],
+								placed_cid = light,
+							}
+						end
+						data[idx] = light
+					end
+					break
+				end
+			end
+		end
 	end
 	if update_needed == 1 then
-		cozylights:setVoxelManipData(vm, data, param2data, true)
+		vm:set_data(data)
+		vm:write_to_map(false)
 	end
 	cozyplayer.last_wield_radius = radius
 	gent_total = gent_total + mf((os.clock() - t) * 1000)

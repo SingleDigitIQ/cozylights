@@ -36,3 +36,16 @@ for i = 1, minetest.LIGHT_MAX do
 	})
 end
 
+--this hack naively assumes it can trigger a cheaper mapblock mesh update than the engine hack(update_liquids)
+--seems to be true in most situations if done right, except not all of them, which maybe makes it useless
+--with wield_light it leaves artifacts from time to time so reverted that, will test on node_light next time
+minetest.register_node("cozylights:hax", {
+	drawtype = "airlike",
+	paramtype = "light",
+	sunlight_propagates = true,
+	walkable = false,
+	pointable = false,
+	diggable = false,
+	buildable_to = true,
+	air_equivalent = true,
+})
