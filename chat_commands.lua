@@ -526,6 +526,26 @@ local cozymode = {
 	end,
 }
 
+local cozybrushsettings = {
+	description = "Invoke Light Brush settings formspec.",
+	privs = { interact = true },
+	func = function(name, param)
+		local player = minetest.get_player_by_name(name)
+		if not player then
+			return false
+		end
+		local itemstack = player:get_wielded_item()
+		if itemstack:get_name() ~= "cozylights:light_brush" then
+			return false, "Equip a Light Brush to open its settings."
+		end
+		cozylights:show_brush_settings(name, itemstack)
+		return true, "UI dispatched."
+	end,
+}
+
+minetest.register_chatcommand("cozybrushsettings", cozybrushsettings)
+minetest.register_chatcommand("zbs", cozybrushsettings)
+
 minetest.register_chatcommand("clearlights", clearlights)
 minetest.register_chatcommand("zcl", clearlights)
 

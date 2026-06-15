@@ -814,11 +814,9 @@ function cozylights:update_shadow_cone(pos_placed)
 			max_bound = bound
 		end
 	end
-
 	local s_minp = vector.subtract(pos_placed, max_bound)
 	local s_maxp = vector.add(pos_placed, max_bound)
 	local nearby_lights = cozylights.storage.get_lights_in_area(s_minp, s_maxp)
-
 	local occluded_lights = {}
 	for i = 1, #nearby_lights do
 		local l_data = nearby_lights[i]
@@ -833,22 +831,16 @@ function cozylights:update_shadow_cone(pos_placed)
 			end
 		end
 	end
-
 	if #occluded_lights == 0 then
 		return
 	end
-
-	-- Pass 1: Geometry & Bounding
 	local min_read = { x = pos_placed.x, y = pos_placed.y, z = pos_placed.z }
 	local max_read = { x = pos_placed.x, y = pos_placed.y, z = pos_placed.z }
 	local active_casts = {}
 	local VOXEL_SQ_RADIUS = (math.sqrt(3) / 2) ^ 2 * 1.5
-
 	for i = 1, #occluded_lights do
 		local source_pos = occluded_lights[i].pos
 		local radius = occluded_lights[i].radius
-
-		-- Fast API lookup to break VM dependency
 		local node_below = minetest.get_node({ x = source_pos.x, y = source_pos.y - 1, z = source_pos.z }).name
 		local node_above = minetest.get_node({ x = source_pos.x, y = source_pos.y + 1, z = source_pos.z }).name
 		local ylvl = 1
@@ -856,35 +848,26 @@ function cozylights:update_shadow_cone(pos_placed)
 			ylvl = -1
 		end
 		local adj_source = { x = source_pos.x, y = source_pos.y + ylvl, z = source_pos.z }
-
 		local V_a = vector.subtract(pos_placed, adj_source)
 		local D_sq = V_a.x * V_a.x + V_a.y * V_a.y + V_a.z * V_a.z
 		local D = math.sqrt(D_sq)
 		local ux, uy, uz = V_a.x / D, V_a.y / D, V_a.z / D
-
-		-- Dynamic threshold: retain precise overlap heuristic
 		local cos_theta
 		if #occluded_lights == 1 then
 			cos_theta = 1.0 - (VOXEL_SQ_RADIUS / (2 * D_sq))
 		else
 			cos_theta = (D_sq > 3.0) and (math.sqrt(D_sq - 3.0) / D) or -1.0
 		end
-
 		local sphere_surface = cozylights:get_sphere_surface(radius)
 		local valid_targets = {}
-
-		-- Expand VM bounds precisely along the valid cone vectors
 		for j = 1, #sphere_surface do
 			local target = sphere_surface[j]
 			local dot = ux * target.nx + uy * target.ny + uz * target.nz
-
 			if dot >= cos_theta then
 				valid_targets[#valid_targets + 1] = target
-
 				local ex = adj_source.x + target.x
 				local ey = adj_source.y + target.y
 				local ez = adj_source.z + target.z
-
 				min_read.x = math.min(min_read.x, adj_source.x, ex)
 				max_read.x = math.max(max_read.x, adj_source.x, ex)
 				min_read.y = math.min(min_read.y, adj_source.y, ey)
@@ -893,36 +876,27 @@ function cozylights:update_shadow_cone(pos_placed)
 				max_read.z = math.max(max_read.z, adj_source.z, ez)
 			end
 		end
-
 		active_casts[#active_casts + 1] = {
 			adj_source = adj_source,
 			radius = radius,
 			targets = valid_targets,
 		}
 	end
-
 	if #active_casts == 0 then
 		return
 	end
-
-	-- Pad bounds strictly for DDA adjacency logic
 	min_read.x, min_read.y, min_read.z = min_read.x - 1, min_read.y - 1, min_read.z - 1
 	max_read.x, max_read.y, max_read.z = max_read.x + 1, max_read.y + 1, max_read.z + 1
-
-	-- Pass 2: Highly Constrained VoxelManip I/O
 	local vm = cozylights.get_voxel_manip()
 	local emin, emax = vm:read_from_map(min_read, max_read)
 	local data = vm:get_data()
 	local param2data = vm:get_param2_data()
 	local a = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
-
 	local use_fix_edges = cozylights.always_fix_edges
 	local visited_pos = use_fix_edges and {} or nil
-
 	for i = 1, #active_casts do
 		local cast = active_casts[i]
 		local targets = cast.targets
-
 		for j = 1, #targets do
 			local target = targets[j]
 			local end_pos = {
@@ -931,7 +905,6 @@ function cozylights:update_shadow_cone(pos_placed)
 				z = cast.adj_source.z + target.z,
 			}
 			local dir = vector.direction(cast.adj_source, end_pos)
-
 			if use_fix_edges then
 				cozylights:shadowcast_fix_edges(cast.adj_source, dir, cast.radius, data, param2data, a, pos_placed)
 			else
@@ -939,7 +912,6 @@ function cozylights:update_shadow_cone(pos_placed)
 			end
 		end
 	end
-
 	cozylights:setVoxelManipData(vm, data, param2data, true)
 	print("Shadow cone update time: " .. math.floor((os.clock() - t) * 1000) .. " ms")
 end
