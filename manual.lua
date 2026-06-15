@@ -2,12 +2,15 @@ local manual_content = [[
 <global size=16>
 <center><style color=#F5A623 size=20>CozyLights Alpha Reference</style></center>
 
-<style color=#F52023>Warning: This wasn't supposed to be possible in pure Lua and is a proof-of-concept alpha build full of experiments that may not always work as intended and will be subject to breaking changes.
-In case you are new to unstable Luanti mods, and want to remove this mod from your world, to avoid inconvenience, you have three options:
-1. use unknown_node cleaner mods after cozylights mod is disabled, such as: https://content.luanti.org/packages/AntumDeluge/cleaner/ or https://content.luanti.org/packages/AiTechEye/servercleaner/
-</style>
-2. second option is running /clearlights in areas where cozylights were generated and only then disable the mod, in case you forgot an area, you can reenable the mod to run /clearlights again
+<style color=#F52023>Warning: This wasn't supposed to be possible and is a proof-of-concept alpha build full of experiments that may not always work as intended and will be subject to breaking changes.</style>
+<style color=#F5A623>In case you are new to unstable Luanti mods, and want to remove this mod from your world, to avoid inconvenience, you have three options:
+1. run /clearlights in areas where cozylights were generated and only then disable the mod, in case you forgot an area, you can reenable the mod to run /clearlights again
+2. use unknown_node cleaner mods after cozylights mod is disabled, such as: https://content.luanti.org/packages/AntumDeluge/cleaner/ or https://content.luanti.org/packages/AiTechEye/servercleaner/
 3. use /uncozymode command that runs /clearlights in areas you visit
+
+Important! Light Brush settings where moved to chat command /cozybrushsettings or short version /zbs
+Right click is now undo for light brush history
+</style>
 
 - light_brush is available only in creative. Only default mode for light_brush is being tested, other modes probably work incorrectly after recent changes
 - always_fix_edges is on by default now, which is maybe too expensive for potato. Check cozylights mod settings, the ones that are in Luanti settings
@@ -38,6 +41,8 @@ Changes the engine day_night_ratio for your player. 0 is the darkest night possi
 Changes the brightness of all cozy light nodes by [adjust_by] in the area of [size]. Can be negative. [keep_map] is 1 by default; if the adjustment pushes a node out of the 1-14 bounds, the command safely reverts to preserve the map. Type 0 for [keep_map] if you are okay with breaking the light map.
 <style color=#00FFFF>/uncozymode</style> <style color=#AAAAAA>[number]</style>
 This is when /clearlights is not enough. Stops generating new cozylights and calls clear lights continuously at all players' positions in the area, but slowly overtime, so it wont be realtime, you don't have to wait until the queue catches up with your position, just move around wherever you see cozylights you want to remove. Disable it by typing /cozymode or via /cozysettings.
+<style color=#00FFFF>/cozybrushsettings</style>
+Opens settings for currently equipped light brush.
 <style color=#55FF55 size=18>Shortcuts</style>
 Short versions of commands above:
 <style color=#00FFFF>zcl</style>   - clearlights
@@ -50,7 +55,7 @@ Short versions of commands above:
 <style color=#00FFFF>zs</style>    - cozysettings
 <style color=#00FFFF>zdnr</style>  - daynightratio
 <style color=#00FFFF>za</style>    - cozyadjust
-
+<style color=#00FFFF>zbs</style>    - cozybrushsettings
 More info about how the mod works can be found on contentdb or on the forum.
 Light Excavation Tool 9000 TURBO V3, Consumer Grade Reality Bending Device and Shadow Brush are coming soon!
 ]]

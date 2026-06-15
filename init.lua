@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.3.2",
+	version = "0.3.3",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	global_brightness = tonumber(minetest.settings:get("cozylights_global_brightness")) or 12,
 	global_radius = tonumber(minetest.settings:get("cozylights_global_radius")) or 15,
@@ -300,6 +300,8 @@ end
 
 local hash_pos = cozylights.hash_pos
 
+local mod_storage = minetest.get_mod_storage()
+
 minetest.register_on_joinplayer(function(player)
 	if not player then
 		return
@@ -307,54 +309,63 @@ minetest.register_on_joinplayer(function(player)
 	local pos = vector.round(player:get_pos())
 	pos.y = pos.y + 1
 	cozylights:on_join_cleanup(pos, 30)
-	local meta = player:get_meta()
-	if meta:get_int("cozylights_manual_issued") == 0 then
+	local player_name = player:get_player_name()
+	local manual_flag = "issued_manual_" .. player_name
+	if mod_storage:get_int(manual_flag) == 0 then
 		local inv = player:get_inventory()
 		if inv:room_for_item("main", "cozylights:alpha_manual") then
 			inv:add_item("main", "cozylights:alpha_manual")
-			meta:set_int("cozylights_manual_issued", 1)
+			mod_storage:set_int(manual_flag, 1)
 		else
 			minetest.log(
 				"warning",
-				"[cozylights] Failed to issue alpha manual to " .. player:get_player_name() .. " - Inventory saturated."
+				"[cozylights] Failed to issue alpha manual to " .. player_name .. " - Inventory saturated."
 			)
 		end
 	end
-	cozylights.cozyplayers[player:get_player_name()] = {
-		name = player:get_player_name(),
-		pos_hash = hash_pos(pos),
+	local meta = player:get_meta()
+	local hist_str = meta:get_string("cozylights_lbrush_history")
+	local lbrush_history = {}
+	if hist_str and hist_str ~= "" then
+		lbrush_history = minetest.deserialize(hist_str) or {}
+	end
+	cozylights.cozyplayers[player_name] = {
+		name = player_name,
+		pos_hash = cozylights.hash_pos(pos),
 		wielded_item = 0,
 		last_pos = pos,
 		last_wield = "",
 		prev_wielded_lights = {},
-		lbrush = {
-			brightness = 14,
-			radius = 80,
-			strength = 0.5,
-			mode = 1,
-			cover_only_surfaces = 0,
-			pos_hash = 0,
-		},
+		lbrush_history = lbrush_history,
 	}
 end)
+
 minetest.register_on_leaveplayer(function(player)
 	if not player then
 		return
 	end
 	local name = player:get_player_name()
-	for i = 1, #cozylights.cozyplayers do
-		if cozylights.cozyplayers[i].name == name then
-			cozylights:wielded_light_cleanup(player, cozylights.cozyplayers[i], 30)
-			table.remove(cozylights.cozyplayers, i)
+	local cozyplayer = cozylights.cozyplayers[name]
+	if cozyplayer then
+		if cozyplayer.lbrush_history then
+			local meta = player:get_meta()
+			meta:set_string("cozylights_lbrush_history", minetest.serialize(cozyplayer.lbrush_history))
 		end
+		cozylights:remove_wield_hud(player, cozyplayer)
+		cozylights:wielded_light_cleanup(player, cozyplayer, 30)
+		cozylights.cozyplayers[name] = nil
 	end
 end)
 
 minetest.register_on_shutdown(function()
-	for i = 1, #cozylights.cozyplayers do
-		local player = minetest.get_player_by_name(cozylights.cozyplayers[i].name)
-		if player ~= nil then
-			cozylights:wielded_light_cleanup(player, cozylights.cozyplayers[i], 30)
+	for name, cozyplayer in pairs(cozylights.cozyplayers) do
+		local player = minetest.get_player_by_name(name)
+		if player then
+			if cozyplayer.lbrush_history then
+				local meta = player:get_meta()
+				meta:set_string("cozylights_lbrush_history", minetest.serialize(cozyplayer.lbrush_history))
+			end
+			cozylights:wielded_light_cleanup(player, cozyplayer, 30)
 		end
 	end
 end)
@@ -511,7 +522,8 @@ local function on_brush_hold(player, cozyplayer, pos, t)
 	if control_bits < 128 or control_bits >= 256 then
 		return
 	end
-	local lb = cozyplayer.lbrush
+	local itemstack = player:get_wielded_item()
+	local lb = cozylights:get_brush_settings(itemstack, cozyplayer.name)
 	if lb.radius > 10 then
 		return
 	end
@@ -528,18 +540,12 @@ local function on_brush_hold(player, cozyplayer, pos, t)
 		above.y = above.y - 1
 	end
 	local above_hash = hash_pos(above)
-	if above_hash ~= lb.pos_hash or lb.mode == 2 or lb.mode == 4 or lb.mode == 5 then
-		lb.pos_hash = above_hash
+	if above_hash ~= cozyplayer.last_brush_hash or lb.mode == 2 or lb.mode == 4 or lb.mode == 5 then
+		cozyplayer.last_brush_hash = above_hash
 		cozylights:draw_brush_light(above, lb)
 		local exe_time = os.clock() - t
 		total_brush_hold_time = total_brush_hold_time + mf(exe_time * 1000)
 		total_brush_hold_step_count = total_brush_hold_step_count + 1
-		print(
-			"Av cozy lights brush step time "
-				.. mf(total_brush_hold_time / total_brush_hold_step_count)
-				.. " ms. Sample of: "
-				.. total_brush_hold_step_count
-		)
 		--if exe_time > brush_hold_step then
 		--	minetest.chat_send_all("brush hold step was adjusted to "..(exe_time*2).." secs to help crispy potato.")
 		--	brush_hold_step = exe_time*2
@@ -551,9 +557,27 @@ cozylights.uncozy_chunk_queue = {}
 cozylights.uncozy_queue_idx = 1
 local UNCOZY_CHUNK_RAD = 16
 local UNCOZY_STEP = UNCOZY_CHUNK_RAD * 2
+local hud_dtime = 0
+local hud_step = 0.25
 
 cozylights.drawn_nodes = {}
 minetest.register_globalstep(function(dtime)
+	hud_dtime = hud_dtime + dtime
+	if hud_dtime >= hud_step then
+		for _, cozyplayer in pairs(cozylights.cozyplayers) do
+			if cozyplayer.hud_timeout and cozyplayer.hud_timeout > 0 then
+				cozyplayer.hud_timeout = cozyplayer.hud_timeout - hud_dtime
+				if cozyplayer.hud_timeout <= 0 then
+					local player = minetest.get_player_by_name(cozyplayer.name)
+					if player then
+						cozylights:remove_wield_hud(player, cozyplayer)
+					end
+					cozyplayer.hud_timeout = 0
+				end
+			end
+		end
+		hud_dtime = 0
+	end
 	if wield_light_enabled then
 		wield_dtime = wield_dtime + dtime
 		if wield_dtime > wield_step then
@@ -618,13 +642,30 @@ minetest.register_globalstep(function(dtime)
 		for _, cozyplayer in pairs(cozylights.cozyplayers) do
 			local t = os.clock()
 			local player = minetest.get_player_by_name(cozyplayer.name)
+			if not player then
+				goto skip_hud
+			end
 			local pos = vector.round(player:get_pos())
 			pos.y = pos.y + 1
-			local wield_name = player:get_wielded_item():get_name()
-			--todo: checking against a string is expensive, what do
+			local itemstack = player:get_wielded_item()
+			local wield_name = itemstack:get_name()
+			local wield_index = player:get_wield_index() -- Retrieve hotbar pointer
 			if wield_name == "cozylights:light_brush" then
+				if not cozyplayer.wielding_brush or cozyplayer.last_wield_index ~= wield_index then
+					cozyplayer.wielding_brush = true
+					cozyplayer.last_wield_index = wield_index
+					cozylights:update_wield_hud(player, cozyplayer, itemstack, 3.0)
+				end
 				on_brush_hold(player, cozyplayer, pos, t)
+			else
+				if cozyplayer.wielding_brush then
+					cozylights:remove_wield_hud(player, cozyplayer)
+					cozyplayer.wielding_brush = false
+					cozyplayer.last_wield_index = nil
+					cozyplayer.hud_timeout = 0
+				end
 			end
+			::skip_hud::
 		end
 	end
 	on_gen_dtime = on_gen_dtime + dtime
