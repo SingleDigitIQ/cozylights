@@ -1,6 +1,6 @@
 cozylights = {
 	-- constant size values and tables
-	version = "0.3.3",
+	version = "0.3.4",
 	default_size = tonumber(minetest.settings:get("mapfix_default_size")) or 40,
 	global_brightness = tonumber(minetest.settings:get("cozylights_global_brightness")) or 12,
 	global_radius = tonumber(minetest.settings:get("cozylights_global_radius")) or 15,
