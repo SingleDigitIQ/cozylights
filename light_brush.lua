@@ -29,7 +29,7 @@ function cozylights:show_brush_settings(player_name, itemstack)
 end
 
 minetest.register_tool("cozylights:light_brush", {
-	description = "Light Brush",
+	description = "Light Brush\nType /zbs chat command to open settings",
 	inventory_image = "light_brush.png",
 	wield_image = "light_brush.png^[transformR90",
 	tool_capabilities = {
@@ -109,7 +109,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		local mode_names = { "Default", "Erase", "Override", "Lighten", "Darken", "Blend" }
 		local mode_idx = meta:get_int("mode")
 		local desc = string.format(
-			"Light Brush\nRadius: %d | Brightness: %d\nStrength: %.2f | Mode: %s",
+			"Light Brush\nRadius: %d | Brightness: %d\nStrength: %.2f | Mode: %s\nType /zbs chat command to open settings",
 			meta:get_int("radius"),
 			meta:get_int("brightness"),
 			meta:get_float("strength"),

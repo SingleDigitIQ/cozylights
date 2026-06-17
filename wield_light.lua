@@ -134,6 +134,12 @@ function cozylights:draw_wielded_light(
 	local radius, dim_levels = cozylights:calc_dims(wield_name, cozy_item)
 	radius = radius > max_wield_light_radius and max_wield_light_radius or radius
 	local brightness_mod = cozy_item.modifiers ~= nil and cozylights.coziest_table[cozy_item.modifiers].brightness or 0
+	if last_pos and vector.distance(pos, last_pos) > 32 then
+		if cozyplayer.prev_wielded_lights and #cozyplayer.prev_wielded_lights > 0 then
+			cozylights:wielded_light_cleanup(nil, cozyplayer, radius)
+		end
+	end
+
 	local max_light = mf(cozy_item.light_source + cozylights.brightness_factor + brightness_mod)
 	max_light = math.max(1, math.min(14, max_light))
 	local nat_light = minetest.get_natural_light(pos)

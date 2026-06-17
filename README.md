@@ -121,15 +121,13 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 ## Todo
 
+- cut the voxel area for huge lights depending on obstruction already
+
 - with new accurate algo brush in any mode other than default probably functions incorrectly
 
 - try hax node for node_light
 
-- undo for light brush
-
 - dynamic priority queue
-
-- save brush settings in item metadata and change icon somehow to resemble the settings
 
 - all queues should be saved in case of server shutdown, especially if its a crash, so these queues can be resumed
 
@@ -151,7 +149,7 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - algo for many adjacent lights
 
-- there are angles in which naive algo behaves perfectly correctly. merge fix_edges and naive algo, evaluate by angle.
+- there are angles in which naive algo behaves perfectly correctly. probably merge fix_edges and naive algo, evaluate by angle, idk depends
 
 - make dropped items emit cozy lights(but less) if they have light_source above 0, just like in original wielded light mod
 
@@ -167,6 +165,10 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 
 - add cone light blocks, so those lights can be built on top of each other to make static lights from old games
 
+- add focused lights that spread light over several kilometers
+
+- add seas of light that have to be excavated because it makes sense
+
 - add light grabber tool, Light Excavation Tool 9000 TURBO V3, so that the light wont be selectable without it
 
 - add Consumer Grade Reality Bending Device to create preset nodes with chosen qualities
@@ -174,6 +176,8 @@ There are like I think 5 algo versions of drawing lights or I refactored that, b
 - add Literal Light Printer that prints user uploaded monochrome pixel art on any surface
 
 - flashlight for survival
+
+- add solid walkable light, probably has to be smelted
 
 - see if its worth it to make light brush craftable in survival. if making it available, it should consume massive amounts of resources per charge, because its too op. possibly recyclable resource that can be harvested with light excavation tool or something
 
